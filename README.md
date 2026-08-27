@@ -74,6 +74,7 @@ Token / Cost / Duration: recorded
 - [已完成长期任务：Issue 06–09](docs/NEXT_TASK_ISSUES_06_09.md)
 - [已完成长期任务：Issue 12–16](docs/NEXT_TASK_ISSUES_12_16.md)
 - [Issue 17–20 工程验收与发布待办](docs/NEXT_TASK_ISSUES_17_20.md)
+- [下一长期任务：Issues 21–26 可恢复 Harness](docs/NEXT_TASK_ISSUES_21_26.md)
 - [30 分钟 Quickstart](docs/QUICKSTART.md)
 - [MCP Server](docs/MCP_SERVER.md)
 - [Eval Harness 与公开基线](docs/EVALS.md)

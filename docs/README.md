@@ -15,6 +15,7 @@
 | [长期任务：Java 代码智能](NEXT_TASK_ISSUES_06_09.md) | 已完成 Issue 06–09 的索引、依赖图、混合检索与上下文验收结果 |
 | [长期任务：Agent 执行闭环](NEXT_TASK_ISSUES_12_16.md) | 已完成 Issue 12–16 的模型网关、Agent Loop、审批、验证和可观测性验收结果 |
 | [MCP、Demo 与 Eval](NEXT_TASK_ISSUES_17_20.md) | Issue 17–20 工程验收结果与仍需人工完成的发布动作 |
+| [可恢复长任务 Harness](NEXT_TASK_ISSUES_21_26.md) | v0.1 未完成项清点与 Issues 21–26 长期任务计划 |
 | [Quickstart](QUICKSTART.md) | 在新环境构建、运行 Eval、启动 MCP 和排查常见故障 |
 | [MCP Server](MCP_SERVER.md) | STDIO 配置、工具清单和安全边界 |
 | [Eval Harness](EVALS.md) | 五任务数据集、指标和基线解释 |

@@ -24,4 +24,4 @@
 
 ## 发布边界
 
-工程实现和本地验收已经完成。真实模型 5-task 基线、公开 GIF/视频、发布 commit 和 `v0.1.0` tag 需要 provider credentials、人工视觉确认与已审阅的 Git commit；当前不伪造这些外部发布证据，也不让 tag 指向未包含本次实现的旧 HEAD。
+工程实现和本地验收已经完成，完整源码已提交为 `2c7cc73`。真实模型 5-task 基线、全新环境 smoke、Docker/远端 CI、公开 GIF/视频和 `v0.1.0` tag 仍需要 provider credentials、相应运行环境与人工视觉确认；当前不伪造这些外部发布证据。
