@@ -1,0 +1,27 @@
+CREATE TABLE customer (
+  id VARCHAR(64) PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  tier VARCHAR(32) NOT NULL
+);
+
+CREATE TABLE account (
+  id VARCHAR(64) PRIMARY KEY,
+  customer_id VARCHAR(64) NOT NULL REFERENCES customer(id),
+  balance DECIMAL(19, 2) NOT NULL,
+  status VARCHAR(32) NOT NULL
+);
+
+CREATE TABLE transfer (
+  id VARCHAR(64) PRIMARY KEY,
+  account_id VARCHAR(64) NOT NULL REFERENCES account(id),
+  amount DECIMAL(19, 2) NOT NULL,
+  occurred_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
+CREATE TABLE account_transaction (
+  id VARCHAR(64) PRIMARY KEY,
+  account_id VARCHAR(64) NOT NULL REFERENCES account(id),
+  type VARCHAR(32) NOT NULL,
+  amount DECIMAL(19, 2) NOT NULL,
+  occurred_at TIMESTAMP WITH TIME ZONE NOT NULL
+);

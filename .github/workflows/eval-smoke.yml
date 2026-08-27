@@ -1,0 +1,29 @@
+name: Eval smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run deterministic smoke checks
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Explain current scope
+        run: echo "This workflow runs the deterministic five-task reference ceiling; provider-backed model baselines remain an explicit release action."

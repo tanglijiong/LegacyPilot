@@ -1,0 +1,13 @@
+id: task-005
+category: transfer-limit
+requirement: Enforce atomic UTC daily transfer limits of 50000 for standard customers and 200000 for VIP customers, including concurrent transfers and day rollover.
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/DailyTransferPolicy.java
+  - src/main/java/io/legacypilot/samples/banking/TransferLimitException.java
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.TransferService
+  - io.legacypilot.samples.banking.TransferRepository
+  - io.legacypilot.samples.banking.AccountRepository
+  - io.legacypilot.samples.banking.CustomerRepository
+maximumSteps: 16

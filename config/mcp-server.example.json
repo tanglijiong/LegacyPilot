@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "legacy-pilot-java": {
+      "command": "java",
+      "args": [
+        "-jar",
+        "/absolute/path/to/LegacyPilot/modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.1.0-SNAPSHOT.jar",
+        "/absolute/path/to/fixed/java/workspace"
+      ]
+    }
+  }
+}

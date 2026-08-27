@@ -1,0 +1,8 @@
+- type: FILE_EXISTS
+  path: src/main/java/io/legacypilot/samples/banking/AccountStatus.java
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/AccountStatus.java
+  value: FROZEN
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/Account.java
+  value: AccountStatus status

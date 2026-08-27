@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: legacy-pilot-server
+  datasource:
+    url: jdbc:h2:file:${LEGACY_PILOT_DATA_DIR:./.legacy-pilot}/legacy-pilot;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+  flyway:
+    enabled: true
+
+legacy-pilot:
+  workspace:
+    root: ${LEGACY_PILOT_WORK_ROOT:${user.dir}/.legacy-pilot}
+
+springdoc:
+  swagger-ui:
+    path: /docs

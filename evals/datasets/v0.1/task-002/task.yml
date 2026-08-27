@@ -1,0 +1,8 @@
+id: task-002
+category: validation
+requirement: Reject zero or negative transfer amounts before any repository write.
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.TransferService
+maximumSteps: 8

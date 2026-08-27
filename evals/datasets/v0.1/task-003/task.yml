@@ -1,0 +1,8 @@
+id: task-003
+category: defect-fix
+requirement: Reject transfer history queries whose end instant is not after the start instant.
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.TransferService#history
+maximumSteps: 8

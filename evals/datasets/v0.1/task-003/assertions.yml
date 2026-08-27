@@ -1,0 +1,6 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: !toExclusive.isAfter(fromInclusive)
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: INVALID_HISTORY_RANGE

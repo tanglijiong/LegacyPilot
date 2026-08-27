@@ -1,0 +1,26 @@
+# Build output
+target/
+**/target/
+
+# IDE
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+application-local.yml
+
+# LegacyPilot runtime data
+.legacy-pilot/
+workspaces/
+traces/

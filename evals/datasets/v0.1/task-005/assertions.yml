@@ -1,0 +1,14 @@
+- type: FILE_EXISTS
+  path: src/main/java/io/legacypilot/samples/banking/DailyTransferPolicy.java
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/DailyTransferPolicy.java
+  value: "50000"
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/DailyTransferPolicy.java
+  value: "200000"
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: synchronized TransferRecord transfer
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: ZoneOffset.UTC

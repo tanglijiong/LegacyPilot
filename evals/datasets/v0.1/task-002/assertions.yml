@@ -1,0 +1,6 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: amount.signum() <= 0
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: INVALID_TRANSFER_AMOUNT

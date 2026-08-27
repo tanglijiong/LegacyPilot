@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: legacy-pilot-cli
+  main:
+    banner-mode: off
+    log-startup-info: false
+  datasource:
+    url: jdbc:h2:file:${LEGACY_PILOT_DATA_DIR:./.legacy-pilot}/legacy-pilot;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    root: ERROR
+
+legacy-pilot:
+  workspace:
+    root: ${LEGACY_PILOT_WORK_ROOT:${user.dir}/.legacy-pilot}

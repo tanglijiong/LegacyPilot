@@ -1,0 +1,8 @@
+- type: FILE_EXISTS
+  path: src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+  value: BigDecimal totalAmount
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+  value: int count

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+  <!-- Constructor injection intentionally stores application collaborators. -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP2" />
+  </Match>
+  <!-- The workspace failure is persisted before the original runtime failure is propagated. -->
+  <Match>
+    <Class name="io.legacypilot.application.service.StartRunUseCase" />
+    <Method name="start" />
+    <Bug pattern="THROWS_METHOD_THROWS_RUNTIMEEXCEPTION" />
+  </Match>
+</FindBugsFilter>

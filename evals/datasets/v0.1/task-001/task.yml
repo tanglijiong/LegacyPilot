@@ -1,0 +1,9 @@
+id: task-001
+category: enum
+requirement: Replace the account status string with a type-safe AccountStatus enum containing ACTIVE, FROZEN, and CLOSED.
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/Account.java
+  - src/main/java/io/legacypilot/samples/banking/AccountStatus.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.Account
+maximumSteps: 8

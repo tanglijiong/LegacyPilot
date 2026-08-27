@@ -1,0 +1,8 @@
+id: task-004
+category: query-field
+requirement: Add an immutable TransferQuery result with accountId, totalAmount, count, from, and to fields.
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.TransferRecord
+maximumSteps: 8
