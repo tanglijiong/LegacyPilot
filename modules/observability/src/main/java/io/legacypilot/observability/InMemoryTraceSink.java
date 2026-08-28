@@ -28,4 +28,25 @@ public final class InMemoryTraceSink implements TraceSink {
         .sorted(Comparator.comparingInt(TraceEvent::sequence))
         .toList();
   }
+
+  @Override
+  public synchronized TraceEvent record(
+      String runId,
+      String type,
+      java.time.Instant occurredAt,
+      java.util.Map<String, String> attributes) {
+    var sequence =
+        events.stream()
+                .filter(event -> event.runId().equals(runId))
+                .mapToInt(TraceEvent::sequence)
+                .max()
+                .orElse(0)
+            + 1;
+    var event = new TraceEvent(runId, sequence, type, occurredAt, attributes);
+    append(event);
+    return events.stream()
+        .filter(value -> value.runId().equals(runId) && value.sequence() == sequence)
+        .findFirst()
+        .orElseThrow();
+  }
 }

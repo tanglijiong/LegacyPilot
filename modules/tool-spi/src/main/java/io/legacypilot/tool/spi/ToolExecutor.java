@@ -78,6 +78,10 @@ public final class ToolExecutor {
     return invoke(tool, context, safeInput, decision.actionDigest(), started);
   }
 
+  public java.util.Optional<ToolDescriptor> descriptor(String toolName) {
+    return registry.find(toolName).map(AgentTool::descriptor);
+  }
+
   private ToolResult invoke(
       AgentTool tool, ToolContext context, JsonNode input, String digest, Instant started) {
     Future<JsonNode> future = null;

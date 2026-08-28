@@ -18,6 +18,8 @@ import picocli.CommandLine.Command;
       RunCancelCommand.class,
       AgentApproveCommand.class,
       AgentResumeCommand.class,
+      AgentRecoverCommand.class,
+      AgentStateCheckCommand.class,
       EvalRunCommand.class
     })
 public class LegacyPilotCommand implements Runnable {

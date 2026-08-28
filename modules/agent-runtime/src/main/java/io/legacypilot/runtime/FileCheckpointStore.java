@@ -1,10 +1,12 @@
 package io.legacypilot.runtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.legacypilot.state.StateInspection;
+import io.legacypilot.state.VersionedJsonFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -24,38 +26,42 @@ public final class FileCheckpointStore implements CheckpointStore {
 
   @Override
   public synchronized void save(AgentCheckpoint checkpoint) {
-    var target = path(checkpoint.runId());
-    try {
-      var temporary = Files.createTempFile(directory, ".checkpoint-", ".tmp");
-      try {
-        mapper.writeValue(temporary.toFile(), checkpoint);
-        Files.move(
-            temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-      } finally {
-        Files.deleteIfExists(temporary);
-      }
-    } catch (IOException exception) {
-      throw new IllegalStateException("unable to persist agent checkpoint", exception);
-    }
+    file(checkpoint.runId()).save(checkpoint);
   }
 
   @Override
   public synchronized Optional<AgentCheckpoint> load(String runId) {
-    var target = path(runId);
-    if (!Files.exists(target)) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(mapper.readValue(target.toFile(), AgentCheckpoint.class));
+    return file(runId).load();
+  }
+
+  public synchronized List<String> runIds() {
+    try (var paths = Files.list(directory)) {
+      return paths
+          .map(path -> Objects.requireNonNull(path.getFileName()).toString())
+          .filter(name -> name.endsWith(".json"))
+          .map(name -> name.replaceFirst("\\.json$", ""))
+          .sorted()
+          .toList();
     } catch (IOException exception) {
-      throw new IllegalStateException("unable to load agent checkpoint", exception);
+      throw new IllegalStateException("unable to list checkpoints", exception);
     }
   }
 
-  private Path path(String runId) {
+  public StateInspection inspect(String runId) {
+    return file(runId).inspect();
+  }
+
+  private VersionedJsonFile<AgentCheckpoint> file(String runId) {
+    validate(runId);
+    return new VersionedJsonFile<>(
+        directory.resolve(runId + ".json"),
+        mapper,
+        mapper.getTypeFactory().constructType(AgentCheckpoint.class));
+  }
+
+  private static void validate(String runId) {
     if (runId == null || !runId.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}")) {
       throw new IllegalArgumentException("run id is invalid");
     }
-    return directory.resolve(runId + ".json");
   }
 }

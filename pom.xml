@@ -35,6 +35,7 @@
     <module>modules/tool-maven</module>
     <module>modules/model-spi</module>
     <module>modules/model-spring-ai</module>
+    <module>modules/durable-state</module>
     <module>modules/observability</module>
     <module>modules/verification</module>
     <module>modules/agent-runtime</module>

@@ -107,6 +107,13 @@
 - **原因：** Java 代码关系需要结构化证据，检索又必须在没有外部向量服务时可本地复现和评测。
 - **后果：** 索引绑定 schema version 与 Git revision；未解析依赖显式保留；Hybrid 排名必须标明候选来源，Vector 故障不能中断基线检索。
 
+## ADR-016：恢复采用 Journal + Lease + 人工不确定态
+
+- **状态：** Accepted
+- **决策：** 持久状态使用版本化 envelope；工具效果由 Action Journal 记录；并发恢复由带 epoch 的 Run Lease fencing；无法证明效果的中间状态进入 `NEEDS_REVIEW`。
+- **原因：** checkpoint 本身不能消除“工具已生效但 checkpoint 未保存”的崩溃窗口，盲目重放写操作会扩大破坏。
+- **后果：** 已确认成功动作可安全跳过；外部命令不宣称理论 exactly-once；恢复可能要求人工检查，但不会用可用性换取不受控重放。
+
 ## 待决问题
 
 | 编号 | 问题 | 决定时间点 |

@@ -31,6 +31,7 @@ import io.legacypilot.runtime.AgentCheckpoint;
 import io.legacypilot.runtime.AgentRuntime;
 import io.legacypilot.runtime.AgentRuntimeResult;
 import io.legacypilot.runtime.ApprovalStore;
+import io.legacypilot.runtime.RecoveryCoordinator;
 import io.legacypilot.runtime.RuntimeApproval;
 import io.legacypilot.runtime.RuntimeStatus;
 import java.io.ByteArrayOutputStream;
@@ -40,11 +41,13 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
 
 class CliCommandsTest {
 
   private static final Instant NOW = Instant.parse("2026-08-27T00:00:00Z");
+  @TempDir Path temporary;
 
   @Test
   void executesProjectAndTaskCommandsAsJson() {
@@ -115,6 +118,43 @@ class CliCommandsTest {
   void rootCommandRequiresASubcommand() {
     assertThrows(CommandLine.ParameterException.class, () -> new LegacyPilotCommand().run());
     assertNotNull(new LegacyPilotCliApplication().legacyPilotObjectMapper());
+  }
+
+  @Test
+  void inspectsMissingAndUnsupportedAgentState() throws Exception {
+    var command = new AgentStateCheckCommand(new ObjectMapper().findAndRegisterModules());
+    var missing =
+        captureResult(
+            () -> new CommandLine(command).execute("run-1", "--state-root", temporary.toString()));
+    assertEquals(0, missing.exitCode());
+    assertTrue(missing.text().contains("MISSING"));
+
+    var checkpoint = temporary.resolve("checkpoints/run-2.json");
+    java.nio.file.Files.createDirectories(checkpoint.getParent());
+    java.nio.file.Files.writeString(checkpoint, "{\"schemaVersion\":99,\"payload\":{}}");
+    var unsupported =
+        captureResult(
+            () ->
+                new CommandLine(
+                        new AgentStateCheckCommand(new ObjectMapper().findAndRegisterModules()))
+                    .execute("run-2", "--state-root", temporary.toString()));
+    assertEquals(2, unsupported.exitCode());
+    assertTrue(unsupported.text().contains("UNSUPPORTED"));
+  }
+
+  @Test
+  void runsSafeRecoveryScan() {
+    var recovery = mock(RecoveryCoordinator.class);
+    when(recovery.recoverAll()).thenReturn(List.of());
+
+    var text =
+        capture(
+            () ->
+                assertEquals(
+                    0, new CommandLine(new AgentRecoverCommand(recovery, output())).execute()));
+
+    assertEquals("[]" + System.lineSeparator(), text);
+    verify(recovery).recoverAll();
   }
 
   @Test
@@ -221,4 +261,17 @@ class CliCommandsTest {
       System.setOut(original);
     }
   }
+
+  private static Captured captureResult(java.util.function.IntSupplier operation) {
+    var original = System.out;
+    var bytes = new ByteArrayOutputStream();
+    try {
+      System.setOut(new PrintStream(bytes, true, StandardCharsets.UTF_8));
+      return new Captured(operation.getAsInt(), bytes.toString(StandardCharsets.UTF_8));
+    } finally {
+      System.setOut(original);
+    }
+  }
+
+  private record Captured(int exitCode, String text) {}
 }

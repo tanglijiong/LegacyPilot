@@ -1,6 +1,7 @@
 package io.legacypilot.observability;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.legacypilot.state.VersionedJsonFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,21 +27,13 @@ public final class FileReportStore implements ReportStore {
 
   @Override
   public synchronized void save(RunReport report) {
-    write(path(report.runId(), ".json"), renderer.json(report));
+    state(report.runId()).save(report);
     write(path(report.runId(), ".md"), renderer.markdown(report));
   }
 
   @Override
   public synchronized Optional<RunReport> load(String runId) {
-    var source = path(runId, ".json");
-    if (!Files.exists(source)) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(mapper.readValue(source.toFile(), RunReport.class));
-    } catch (IOException exception) {
-      throw new IllegalStateException("unable to load run report", exception);
-    }
+    return state(runId).load();
   }
 
   private void write(Path target, String content) {
@@ -63,5 +56,10 @@ public final class FileReportStore implements ReportStore {
       throw new IllegalArgumentException("run id is invalid");
     }
     return directory.resolve(runId + extension);
+  }
+
+  private VersionedJsonFile<RunReport> state(String runId) {
+    return new VersionedJsonFile<>(
+        path(runId, ".json"), mapper, mapper.getTypeFactory().constructType(RunReport.class));
   }
 }

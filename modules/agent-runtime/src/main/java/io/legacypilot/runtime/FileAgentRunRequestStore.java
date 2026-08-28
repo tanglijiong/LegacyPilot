@@ -1,10 +1,11 @@
 package io.legacypilot.runtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.legacypilot.state.StateInspection;
+import io.legacypilot.state.VersionedJsonFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -24,38 +25,29 @@ public final class FileAgentRunRequestStore implements AgentRunRequestStore {
 
   @Override
   public synchronized void save(AgentRunRequest request) {
-    var target = path(request.runId());
-    try {
-      var temporary = Files.createTempFile(directory, ".request-", ".tmp");
-      try {
-        mapper.writeValue(temporary.toFile(), request);
-        Files.move(
-            temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
-      } finally {
-        Files.deleteIfExists(temporary);
-      }
-    } catch (IOException exception) {
-      throw new IllegalStateException("unable to persist agent request", exception);
-    }
+    file(request.runId()).save(request);
   }
 
   @Override
   public synchronized Optional<AgentRunRequest> load(String runId) {
-    var target = path(runId);
-    if (!Files.exists(target)) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(mapper.readValue(target.toFile(), AgentRunRequest.class));
-    } catch (IOException exception) {
-      throw new IllegalStateException("unable to load agent request", exception);
-    }
+    return file(runId).load();
   }
 
-  private Path path(String runId) {
+  public StateInspection inspect(String runId) {
+    return file(runId).inspect();
+  }
+
+  private VersionedJsonFile<AgentRunRequest> file(String runId) {
+    validate(runId);
+    return new VersionedJsonFile<>(
+        directory.resolve(runId + ".json"),
+        mapper,
+        mapper.getTypeFactory().constructType(AgentRunRequest.class));
+  }
+
+  private static void validate(String runId) {
     if (runId == null || !runId.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}")) {
       throw new IllegalArgumentException("run id is invalid");
     }
-    return directory.resolve(runId + ".json");
   }
 }

@@ -17,6 +17,7 @@ import io.legacypilot.runtime.AgentRuntimeResult;
 import io.legacypilot.runtime.ApprovalScope;
 import io.legacypilot.runtime.ApprovalStore;
 import io.legacypilot.runtime.CheckpointStore;
+import io.legacypilot.runtime.RecoveryCoordinator;
 import io.legacypilot.runtime.RuntimeApproval;
 import io.legacypilot.runtime.RuntimeStatus;
 import java.math.BigDecimal;
@@ -34,13 +35,15 @@ class AgentRuntimeControllerTest {
     var checkpoints = mock(CheckpointStore.class);
     var approvals = mock(ApprovalStore.class);
     var reports = mock(ReportStore.class);
-    var controller = new AgentRuntimeController(runtime, checkpoints, approvals, reports);
+    var recovery = mock(RecoveryCoordinator.class);
+    var controller = new AgentRuntimeController(runtime, checkpoints, approvals, reports, recovery);
     var checkpoint = checkpoint();
     var result = new AgentRuntimeResult(checkpoint, null, null);
     var request = mock(AgentRunRequest.class);
     var report = report();
     when(runtime.execute(request)).thenReturn(result);
     when(runtime.resume("run-1")).thenReturn(result);
+    when(recovery.recoverAll()).thenReturn(List.of());
     when(checkpoints.load("run-1")).thenReturn(Optional.of(checkpoint));
     when(reports.load("run-1")).thenReturn(Optional.of(report));
 
@@ -58,6 +61,7 @@ class AgentRuntimeControllerTest {
     assertEquals(checkpoint, controller.approve("run-1", approval));
     assertEquals(result, controller.resume("run-1"));
     assertEquals(report, controller.report("run-1"));
+    assertEquals(List.of(), controller.recover());
     verify(approvals).save(any(RuntimeApproval.class));
   }
 
@@ -68,7 +72,8 @@ class AgentRuntimeControllerTest {
             mock(AgentRuntime.class),
             mock(CheckpointStore.class),
             mock(ApprovalStore.class),
-            mock(ReportStore.class));
+            mock(ReportStore.class),
+            mock(RecoveryCoordinator.class));
     assertThrows(IllegalArgumentException.class, () -> controller.checkpoint("missing"));
     assertThrows(IllegalArgumentException.class, () -> controller.report("missing"));
   }

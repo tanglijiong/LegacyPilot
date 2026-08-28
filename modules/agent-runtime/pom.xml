@@ -12,5 +12,6 @@
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-tool-spi</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-verification</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-observability</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-durable-state</artifactId><version>${project.version}</version></dependency>
   </dependencies>
 </project>

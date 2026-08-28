@@ -53,6 +53,7 @@ LegacyPilot/
 │   ├── sandbox-docker/
 │   ├── verification/
 │   ├── observability/
+│   ├── durable-state/
 │   ├── persistence/
 │   ├── reporting/
 │   └── evaluation/
@@ -98,6 +99,7 @@ LegacyPilot/
 | `sandbox-docker` | 容器执行、资源与网络限制 | 业务计划逻辑 |
 | `verification` | 编译、测试、静态分析、风险和终态证据 | 模型对“完成”的声明 |
 | `observability` | Trace、Metric、脱敏、导出 | 业务决策 |
+| `durable-state` | 版本化 JSON envelope、原子替换、迁移、备份与损坏隔离 | Agent/业务类型 |
 | `persistence` | Repository 实现与迁移 | Controller 逻辑 |
 | `reporting` | JSON/Markdown 报告 | 直接执行工具 |
 | `evaluation` | 数据集解析、Runner、指标聚合 | 特定 Demo 的硬编码 |

@@ -2,7 +2,6 @@ package io.legacypilot.mcp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.legacypilot.observability.TraceEvent;
 import io.legacypilot.observability.TraceSink;
 import io.legacypilot.tool.spi.ToolContext;
 import io.legacypilot.tool.spi.ToolExecutor;
@@ -13,7 +12,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class McpToolBridge {
   private static final Map<String, String> EXPOSED =
@@ -32,7 +30,6 @@ public final class McpToolBridge {
   private final TraceSink trace;
   private final ObjectMapper mapper;
   private final Clock clock;
-  private final AtomicInteger sequence = new AtomicInteger();
 
   public McpToolBridge(
       String sessionId,
@@ -82,13 +79,7 @@ public final class McpToolBridge {
     attributes.put("internalTool", internal);
     attributes.put("status", result.status().name());
     attributes.put("actionDigest", result.actionDigest());
-    trace.append(
-        new TraceEvent(
-            sessionId,
-            sequence.incrementAndGet(),
-            "mcp.tool.completed",
-            clock.instant(),
-            attributes));
+    trace.record(sessionId, "mcp.tool.completed", clock.instant(), attributes);
     return result.successful()
         ? response(
             result.output(),

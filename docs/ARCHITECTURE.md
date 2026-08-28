@@ -296,6 +296,8 @@ MCP 会话必须映射到固定 project/workspace，不能由客户端传入任�
 - 每一步后保存 checkpoint；恢复时先确认 worktree、容器和 Git revision 是否一致。
 - 不确定某动作是否已执行时，不盲目重放写操作，进入人工检查状态。
 
+v0.2 第一阶段实现版本化 durable-state envelope、Action Journal、带 epoch fencing 的 Run Lease、append-only File Trace 和带 TTL 的 Task Memory。Runtime 在每次 checkpoint 前续租并校验 epoch；`SUCCEEDED` action 直接复用持久结果，`RUNNING` 的条件/非幂等 action 转入 `NEEDS_REVIEW`。Recovery Coordinator 只自动恢复没有审批或人工审查阻塞的状态。详细运维与磁盘布局见 [`RESILIENT_HARNESS.md`](RESILIENT_HARNESS.md)。
+
 ## 12. 测试策略
 
 - **Unit**：状态机、预算、策略、路径校验、排名和报告生成。

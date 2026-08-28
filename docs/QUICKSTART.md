@@ -39,6 +39,16 @@ java -jar modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.1.0-SN
 
 没有 `ChatModel` 时，生命周期 API、MCP、Fake/Replay、fixture 和 reference eval 仍可运行；真实模型调用会返回 `PROVIDER_UNAVAILABLE`。
 
+## 5. 检查和恢复长任务
+
+```bash
+java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar \
+  agent-state-check RUN_ID
+java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar agent-recover
+```
+
+默认持久状态位于 `.legacy-pilot/agent`。`agent-recover` 只恢复安全的非终态任务，不会越过 `WAITING_FOR_APPROVAL` 或 `NEEDS_REVIEW`。迁移、lease 和故障处理细节见[恢复机制运维指南](RESILIENT_HARNESS.md)。
+
 ## 故障排查
 
 | 症状 | 检查 |
@@ -48,4 +58,7 @@ java -jar modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.1.0-SN
 | 项目注册被拒绝 | 清理目标仓库 dirty 状态；当前版本拒绝 submodule、Git LFS 和含凭据 URL |
 | MCP 路径被拒绝 | 只能使用启动参数绑定 workspace 内的相对路径，不能使用绝对路径或 `..` |
 | Agent 等待审批 | 使用 REST approval endpoint 或 CLI `agent-approve`，随后 `agent-resume` |
+| Agent 状态无法读取 | 运行 `agent-state-check RUN_ID`；保留 `.corrupt` 和 `.previous` 文件供诊断 |
+| 返回 `LEASE_CONFLICT` | 另一个 Runtime 正持有该 run；等待 lease 到期或让当前 owner 正常结束 |
+| 返回 `NEEDS_REVIEW` | 上次工具效果无法确认；检查 diff/构建证据后重新提交 action-bound approval |
 | 真实模型不可用 | 配置一个 Spring AI `ChatModel` Bean；不要把 key 写入仓库配置 |

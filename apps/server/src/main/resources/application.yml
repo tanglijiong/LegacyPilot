@@ -11,6 +11,11 @@ spring:
 legacy-pilot:
   workspace:
     root: ${LEGACY_PILOT_WORK_ROOT:${user.dir}/.legacy-pilot}
+  agent:
+    state-root: ${LEGACY_PILOT_AGENT_STATE_ROOT:${user.dir}/.legacy-pilot/agent}
+    lease-ttl: ${LEGACY_PILOT_AGENT_LEASE_TTL:2m}
+    memory:
+      maximum-entries: ${LEGACY_PILOT_AGENT_MEMORY_MAXIMUM_ENTRIES:5000}
 
 springdoc:
   swagger-ui:

@@ -9,8 +9,11 @@ import io.legacypilot.runtime.AgentRuntimeResult;
 import io.legacypilot.runtime.ApprovalScope;
 import io.legacypilot.runtime.ApprovalStore;
 import io.legacypilot.runtime.CheckpointStore;
+import io.legacypilot.runtime.RecoveryCoordinator;
+import io.legacypilot.runtime.RecoveryOutcome;
 import io.legacypilot.runtime.RuntimeApproval;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,16 +29,19 @@ public class AgentRuntimeController {
   private final CheckpointStore checkpoints;
   private final ApprovalStore approvals;
   private final ReportStore reports;
+  private final RecoveryCoordinator recovery;
 
   public AgentRuntimeController(
       AgentRuntime runtime,
       CheckpointStore checkpoints,
       ApprovalStore approvals,
-      ReportStore reports) {
+      ReportStore reports,
+      RecoveryCoordinator recovery) {
     this.runtime = runtime;
     this.checkpoints = checkpoints;
     this.approvals = approvals;
     this.reports = reports;
+    this.recovery = recovery;
   }
 
   @PostMapping
@@ -68,6 +74,11 @@ public class AgentRuntimeController {
   @PostMapping("/{runId}/resume")
   AgentRuntimeResult resume(@PathVariable String runId) {
     return runtime.resume(runId);
+  }
+
+  @PostMapping("/recovery")
+  List<RecoveryOutcome> recover() {
+    return recovery.recoverAll();
   }
 
   @GetMapping("/{runId}/report")

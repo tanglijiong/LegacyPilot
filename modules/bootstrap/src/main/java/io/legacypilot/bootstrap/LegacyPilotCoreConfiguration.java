@@ -15,8 +15,10 @@ import io.legacypilot.application.service.GetTaskUseCase;
 import io.legacypilot.application.service.RegisterProjectUseCase;
 import io.legacypilot.application.service.StartRunUseCase;
 import io.legacypilot.context.ContextBuilder;
+import io.legacypilot.context.ContextCompactor;
 import io.legacypilot.context.HybridRetriever;
 import io.legacypilot.context.Retriever;
+import io.legacypilot.context.TaskMemoryStore;
 import io.legacypilot.context.TokenEstimator;
 import io.legacypilot.model.ModelCostTable;
 import io.legacypilot.model.ModelErrorType;
@@ -26,21 +28,27 @@ import io.legacypilot.model.StructuredModelGateway;
 import io.legacypilot.model.springai.SpringAiRawModelClient;
 import io.legacypilot.observability.AgentMetrics;
 import io.legacypilot.observability.FileReportStore;
-import io.legacypilot.observability.InMemoryTraceSink;
+import io.legacypilot.observability.FileTraceSink;
 import io.legacypilot.observability.ReportStore;
 import io.legacypilot.observability.SensitiveDataRedactor;
 import io.legacypilot.observability.TraceSink;
 import io.legacypilot.persistence.JdbcProjectRepository;
 import io.legacypilot.persistence.JdbcTaskRepository;
 import io.legacypilot.persistence.JdbcTaskRunRepository;
+import io.legacypilot.runtime.ActionJournal;
 import io.legacypilot.runtime.AgentPlanner;
 import io.legacypilot.runtime.AgentRunRequestStore;
 import io.legacypilot.runtime.AgentRuntime;
 import io.legacypilot.runtime.ApprovalStore;
 import io.legacypilot.runtime.CheckpointStore;
+import io.legacypilot.runtime.FileActionJournal;
 import io.legacypilot.runtime.FileAgentRunRequestStore;
 import io.legacypilot.runtime.FileApprovalStore;
 import io.legacypilot.runtime.FileCheckpointStore;
+import io.legacypilot.runtime.FileRunLeaseStore;
+import io.legacypilot.runtime.FileTaskMemoryStore;
+import io.legacypilot.runtime.RecoveryCoordinator;
+import io.legacypilot.runtime.RunLeaseStore;
 import io.legacypilot.sandbox.DockerSandbox;
 import io.legacypilot.sandbox.SandboxExecutor;
 import io.legacypilot.sandbox.SandboxLimits;
@@ -305,8 +313,37 @@ public class LegacyPilotCoreConfiguration {
   }
 
   @Bean
-  TraceSink traceSink() {
-    return new InMemoryTraceSink(new SensitiveDataRedactor(8_192));
+  TraceSink traceSink(
+      @Value("${legacy-pilot.agent.state-root:${user.dir}/.legacy-pilot/agent}") Path stateRoot,
+      ObjectMapper mapper) {
+    return new FileTraceSink(stateRoot.resolve("traces"), mapper, new SensitiveDataRedactor(8_192));
+  }
+
+  @Bean
+  ActionJournal actionJournal(
+      @Value("${legacy-pilot.agent.state-root:${user.dir}/.legacy-pilot/agent}") Path stateRoot,
+      ObjectMapper mapper) {
+    return new FileActionJournal(stateRoot.resolve("actions"), mapper);
+  }
+
+  @Bean
+  RunLeaseStore runLeaseStore(
+      @Value("${legacy-pilot.agent.state-root:${user.dir}/.legacy-pilot/agent}") Path stateRoot,
+      ObjectMapper mapper) {
+    return new FileRunLeaseStore(stateRoot.resolve("leases"), mapper);
+  }
+
+  @Bean
+  TaskMemoryStore taskMemoryStore(
+      @Value("${legacy-pilot.agent.state-root:${user.dir}/.legacy-pilot/agent}") Path stateRoot,
+      ObjectMapper mapper,
+      @Value("${legacy-pilot.agent.memory.maximum-entries:5000}") int maximumEntries) {
+    return new FileTaskMemoryStore(stateRoot.resolve("memory"), mapper, maximumEntries);
+  }
+
+  @Bean
+  ContextCompactor contextCompactor() {
+    return new ContextCompactor(TokenEstimator.conservative());
   }
 
   @Bean
@@ -350,7 +387,13 @@ public class LegacyPilotCoreConfiguration {
       ReportStore reports,
       AgentMetrics metrics,
       ObjectMapper mapper,
-      Clock clock) {
+      Clock clock,
+      ActionJournal journal,
+      RunLeaseStore leases,
+      TaskMemoryStore memories,
+      ContextCompactor compactor,
+      @Value("${legacy-pilot.agent.owner:}") String owner,
+      @Value("${legacy-pilot.agent.lease-ttl:2m}") Duration leaseTtl) {
     return new AgentRuntime(
         planner,
         contexts,
@@ -363,7 +406,22 @@ public class LegacyPilotCoreConfiguration {
         reports,
         metrics,
         mapper,
-        clock);
+        clock,
+        journal,
+        leases,
+        memories,
+        compactor,
+        owner.isBlank() ? "runtime-" + UUID.randomUUID() : owner,
+        leaseTtl);
+  }
+
+  @Bean
+  RecoveryCoordinator recoveryCoordinator(
+      @Value("${legacy-pilot.agent.state-root:${user.dir}/.legacy-pilot/agent}") Path stateRoot,
+      ObjectMapper mapper,
+      AgentRuntime runtime) {
+    return new RecoveryCoordinator(
+        new FileCheckpointStore(stateRoot.resolve("checkpoints"), mapper), runtime);
   }
 
   private static Set<String> mavenProperties() {

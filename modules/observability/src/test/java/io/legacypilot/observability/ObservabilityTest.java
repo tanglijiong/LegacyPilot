@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -82,5 +83,86 @@ class ObservabilityTest {
     assertTrue(Files.readString(directory.resolve("run-1.md")).contains("# LegacyPilot Run"));
     assertTrue(store.load("missing").isEmpty());
     assertThrows(IllegalArgumentException.class, () -> store.load("../escape"));
+  }
+
+  @Test
+  void persistsConcurrentTraceSequenceAcrossRestart() throws Exception {
+    var mapper = new ObjectMapper().findAndRegisterModules();
+    var trace =
+        new FileTraceSink(directory.resolve("traces"), mapper, new SensitiveDataRedactor(256));
+    try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+      var futures =
+          java.util.stream.IntStream.range(0, 100)
+              .mapToObj(
+                  index ->
+                      executor.submit(
+                          () ->
+                              trace.record(
+                                  "long-run",
+                                  "fault.injected",
+                                  Instant.EPOCH.plusMillis(index),
+                                  Map.of(
+                                      "token",
+                                      "secret-" + index,
+                                      "point",
+                                      Integer.toString(index)))))
+              .toList();
+      for (var future : futures) {
+        future.get();
+      }
+    }
+
+    var restored =
+        new FileTraceSink(directory.resolve("traces"), mapper, new SensitiveDataRedactor(256));
+    var events = restored.events("long-run");
+    assertEquals(100, events.size());
+    assertEquals(
+        java.util.stream.IntStream.rangeClosed(1, 100).boxed().toList(),
+        events.stream().map(TraceEvent::sequence).toList());
+    assertTrue(
+        events.stream().allMatch(event -> event.attributes().get("token").equals("[REDACTED]")));
+  }
+
+  @Test
+  void validatesAppendSequenceAndQuarantinesInterruptedTail() throws Exception {
+    var mapper = new ObjectMapper().findAndRegisterModules();
+    var root = directory.resolve("trace-validation");
+    var trace = new FileTraceSink(root, mapper, new SensitiveDataRedactor(256));
+    trace.append(new TraceEvent("run-2", 1, "start", Instant.EPOCH, Map.of()));
+
+    assertThrows(
+        IllegalStateException.class,
+        () -> trace.append(new TraceEvent("run-2", 3, "gap", Instant.EPOCH, Map.of())));
+    assertThrows(IllegalArgumentException.class, () -> trace.events("../escape"));
+
+    var interrupted = root.resolve("interrupted.jsonl");
+    Files.writeString(
+        interrupted,
+        mapper.writeValueAsString(
+                new TraceEvent("interrupted", 1, "start", Instant.EPOCH, Map.of()))
+            + "\n\n{\"runId\":");
+    assertEquals(1, trace.events("interrupted").size());
+    assertTrue(Files.exists(root.resolve("interrupted.jsonl.corrupt-tail")));
+  }
+
+  @Test
+  void defaultTraceRecordAllocatesTheNextSequence() {
+    var values = new java.util.ArrayList<TraceEvent>();
+    TraceSink trace =
+        new TraceSink() {
+          @Override
+          public void append(TraceEvent event) {
+            values.add(event);
+          }
+
+          @Override
+          public List<TraceEvent> events(String runId) {
+            return values.stream().filter(value -> value.runId().equals(runId)).toList();
+          }
+        };
+
+    trace.append(new TraceEvent("run-3", 1, "start", Instant.EPOCH, Map.of()));
+    assertEquals(
+        2, trace.record("run-3", "next", Instant.EPOCH.plusSeconds(1), Map.of()).sequence());
   }
 }

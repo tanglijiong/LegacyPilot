@@ -43,6 +43,8 @@
 
 ## v0.2 — Strong Harness
 
+**当前进度：** 第一阶段 Issues 21–26 已完成；第二阶段 Issues 27–32 已规划，详见 [`NEXT_TASK_ISSUES_27_32.md`](NEXT_TASK_ISSUES_27_32.md)。
+
 ### 目标
 
 把 v0.1 的可运行闭环变成可恢复、可治理、可被其他客户端复用的 Harness。

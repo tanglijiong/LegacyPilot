@@ -2,12 +2,17 @@ package io.legacypilot.runtime;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.legacypilot.context.ContextBuilder;
+import io.legacypilot.context.ContextCompactor;
+import io.legacypilot.context.InMemoryTaskMemoryStore;
+import io.legacypilot.context.MemoryKind;
+import io.legacypilot.context.TaskMemory;
+import io.legacypilot.context.TaskMemoryStore;
+import io.legacypilot.context.TokenEstimator;
 import io.legacypilot.model.ModelException;
 import io.legacypilot.model.ModelUsage;
 import io.legacypilot.observability.AgentMetrics;
 import io.legacypilot.observability.ReportStore;
 import io.legacypilot.observability.RunReport;
-import io.legacypilot.observability.TraceEvent;
 import io.legacypilot.observability.TraceSink;
 import io.legacypilot.tool.spi.ActionDigests;
 import io.legacypilot.tool.spi.ToolContext;
@@ -24,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class AgentRuntime {
 
@@ -40,6 +47,13 @@ public final class AgentRuntime {
   private final AgentMetrics metrics;
   private final ObjectMapper mapper;
   private final Clock clock;
+  private final ActionJournal journal;
+  private final RunLeaseStore leases;
+  private final TaskMemoryStore memories;
+  private final ContextCompactor compactor;
+  private final String owner;
+  private final Duration leaseTtl;
+  private final ConcurrentHashMap<String, RunLease> activeLeases = new ConcurrentHashMap<>();
 
   public AgentRuntime(
       AgentPlanner planner,
@@ -64,7 +78,13 @@ public final class AgentRuntime {
         new InMemoryReportStore(),
         metrics,
         mapper,
-        clock);
+        clock,
+        new InMemoryActionJournal(),
+        new InMemoryRunLeaseStore(),
+        new InMemoryTaskMemoryStore(1_000),
+        new ContextCompactor(TokenEstimator.conservative()),
+        "runtime-" + UUID.randomUUID(),
+        Duration.ofMinutes(2));
   }
 
   public AgentRuntime(
@@ -80,6 +100,46 @@ public final class AgentRuntime {
       AgentMetrics metrics,
       ObjectMapper mapper,
       Clock clock) {
+    this(
+        planner,
+        contexts,
+        tools,
+        verification,
+        checkpoints,
+        requests,
+        approvals,
+        trace,
+        reports,
+        metrics,
+        mapper,
+        clock,
+        new InMemoryActionJournal(),
+        new InMemoryRunLeaseStore(),
+        new InMemoryTaskMemoryStore(1_000),
+        new ContextCompactor(TokenEstimator.conservative()),
+        "runtime-" + UUID.randomUUID(),
+        Duration.ofMinutes(2));
+  }
+
+  public AgentRuntime(
+      AgentPlanner planner,
+      ContextBuilder contexts,
+      ToolExecutor tools,
+      VerificationPipeline verification,
+      CheckpointStore checkpoints,
+      AgentRunRequestStore requests,
+      ApprovalStore approvals,
+      TraceSink trace,
+      ReportStore reports,
+      AgentMetrics metrics,
+      ObjectMapper mapper,
+      Clock clock,
+      ActionJournal journal,
+      RunLeaseStore leases,
+      TaskMemoryStore memories,
+      ContextCompactor compactor,
+      String owner,
+      Duration leaseTtl) {
     this.planner = Objects.requireNonNull(planner);
     this.contexts = Objects.requireNonNull(contexts);
     this.tools = Objects.requireNonNull(tools);
@@ -92,11 +152,37 @@ public final class AgentRuntime {
     this.metrics = Objects.requireNonNull(metrics);
     this.mapper = Objects.requireNonNull(mapper);
     this.clock = Objects.requireNonNull(clock);
+    this.journal = Objects.requireNonNull(journal);
+    this.leases = Objects.requireNonNull(leases);
+    this.memories = Objects.requireNonNull(memories);
+    this.compactor = Objects.requireNonNull(compactor);
+    if (owner == null
+        || owner.isBlank()
+        || leaseTtl == null
+        || leaseTtl.isNegative()
+        || leaseTtl.isZero()) {
+      throw new IllegalArgumentException("runtime owner and lease TTL are required");
+    }
+    this.owner = owner;
+    this.leaseTtl = leaseTtl;
   }
 
   public AgentRuntimeResult execute(AgentRunRequest request) {
-    requests.save(request);
+    var lease = leases.acquire(request.runId(), owner, clock.instant(), leaseTtl).orElse(null);
+    if (lease == null) {
+      return leaseConflict(request.runId());
+    }
+    activeLeases.put(request.runId(), lease);
     try {
+      requests.save(request);
+      trace.record(
+          request.runId(),
+          "lease.acquired",
+          clock.instant(),
+          Map.of(
+              "owner", lease.owner(),
+              "epoch", Long.toString(lease.epoch()),
+              "expiresAt", lease.expiresAt().toString()));
       return run(request);
     } catch (ModelException exception) {
       var checkpoint = checkpoints.load(request.runId()).orElseThrow(() -> exception);
@@ -125,6 +211,19 @@ public final class AgentRuntime {
       checkpoint =
           terminal(checkpoint, RuntimeStatus.FAILED, "model failure: " + exception.type().name());
       return result(checkpoint, null);
+    } finally {
+      var current = activeLeases.remove(request.runId());
+      if (current != null) {
+        try {
+          trace.record(
+              request.runId(),
+              "lease.released",
+              clock.instant(),
+              Map.of("owner", current.owner(), "epoch", Long.toString(current.epoch())));
+        } finally {
+          leases.release(current);
+        }
+      }
     }
   }
 
@@ -172,9 +271,27 @@ public final class AgentRuntime {
       if (checkpoint.pendingAction() != null) {
         action = checkpoint.pendingAction();
       } else {
+        var compacted =
+            compactor.compact(
+                memories.active(request.runId(), clock.instant()),
+                request.contextRequest().tokenBudget(),
+                checkpoint.steps() + 1);
+        event(
+            checkpoint,
+            "context.compacted",
+            Map.of(
+                "version",
+                Integer.toString(compacted.version()),
+                "tokens",
+                Integer.toString(compacted.estimatedTokens()),
+                "retained",
+                Integer.toString(compacted.retainedMemoryIds().size())));
+        var observation = checkpoint.observation();
+        if (!compacted.content().isBlank()) {
+          observation += "\nLong-term task context:\n" + compacted.content();
+        }
         var decision =
-            planner.next(
-                request, checkpoint.plan(), checkpoint.observation(), checkpoint.steps() + 1);
+            planner.next(request, checkpoint.plan(), observation, checkpoint.steps() + 1);
         checkpoint = usage(checkpoint, decision.usage());
         action = decision.value();
       }
@@ -197,6 +314,9 @@ public final class AgentRuntime {
         approvals
             .consumeMatching(request.runId(), digest, planDigest, clock.instant())
             .orElse(null);
+    var actionId = String.format("%06d-%s", checkpoint.steps() + 1, digest.substring(0, 12));
+    var existing = journal.find(request.runId(), actionId).orElse(null);
+    var descriptor = tools.descriptor(action.tool()).orElse(null);
     if (approval != null && approval.decision() == RuntimeApproval.Decision.DENIED) {
       var denied =
           terminal(checkpoint, RuntimeStatus.DENIED, "action denied by " + approval.actor());
@@ -212,15 +332,120 @@ public final class AgentRuntime {
               "digest", digest,
               "scope", approval.scope().name()));
     }
+    if (existing != null && existing.status() == ActionStatus.SUCCEEDED) {
+      event(checkpoint, "action.replay.skipped", Map.of("actionId", actionId, "digest", digest));
+      remember(
+          request.runId(),
+          actionId + "-replay",
+          MemoryKind.FACT,
+          "Previously successful action was not executed again: " + existing.resultSummary(),
+          Set.of("journal:" + actionId),
+          true);
+      return new ToolOutcome(
+          update(
+              checkpoint,
+              RuntimeStatus.EXECUTING,
+              checkpoint.plan(),
+              checkpoint.steps() + 1,
+              checkpoint.retries(),
+              checkpoint.usage(),
+              null,
+              "",
+              0,
+              existing.resultSummary()),
+          false);
+    }
+    if (existing != null
+        && (existing.status() == ActionStatus.NEEDS_REVIEW
+            || (existing.status() == ActionStatus.RUNNING
+                && (descriptor == null
+                    || descriptor.idempotency() != io.legacypilot.tool.spi.Idempotency.IDEMPOTENT)))
+        && approval == null) {
+      var review =
+          existing.transition(
+              ActionStatus.NEEDS_REVIEW,
+              existing.attempts(),
+              "previous execution outcome is uncertain",
+              clock.instant());
+      journal.save(review);
+      remember(
+          request.runId(),
+          actionId + "-review",
+          MemoryKind.PENDING_ACTION,
+          "Action requires review before replay: " + action.tool(),
+          Set.of("journal:" + actionId),
+          true);
+      return new ToolOutcome(
+          update(
+              checkpoint,
+              RuntimeStatus.NEEDS_REVIEW,
+              checkpoint.plan(),
+              checkpoint.steps(),
+              checkpoint.retries(),
+              checkpoint.usage(),
+              action,
+              checkpoint.lastFailedDigest(),
+              checkpoint.repeatedFailures(),
+              "uncertain action requires explicit review: " + actionId),
+          true);
+    }
     var approved = approval == null ? Set.<String>of() : Set.of(digest);
     var context = new ToolContext(request.runId(), request.workspace(), approved, false);
+    var canInvoke =
+        descriptor != null
+            && (descriptor.risk() == io.legacypilot.tool.spi.RiskLevel.READ_ONLY
+                || approval != null);
+    ActionRecord running = null;
+    if (canInvoke) {
+      var prepared =
+          existing == null
+              ? new ActionRecord(
+                  actionId,
+                  request.runId(),
+                  action.tool(),
+                  digest,
+                  planDigest,
+                  ActionStatus.PREPARED,
+                  0,
+                  "",
+                  clock.instant())
+              : existing;
+      journal.save(prepared);
+      running =
+          prepared.transition(
+              ActionStatus.RUNNING,
+              prepared.attempts() + 1,
+              "tool invocation started",
+              clock.instant());
+      journal.save(running);
+      event(checkpoint, "action.started", Map.of("actionId", actionId, "digest", digest));
+    }
     var result = tools.execute(action.tool(), context, action.input());
+    if (running != null) {
+      var summary =
+          result.successful()
+              ? Objects.toString(result.output(), "tool succeeded")
+              : result.error().code() + ": " + result.error().message();
+      journal.save(
+          running.transition(
+              result.successful() ? ActionStatus.SUCCEEDED : ActionStatus.FAILED,
+              running.attempts(),
+              summary,
+              clock.instant()));
+    }
     metrics.toolInvocation(action.tool(), result.status().name());
     event(
         checkpoint,
         "tool.completed",
         Map.of("tool", action.tool(), "status", result.status().name(), "digest", digest));
     if (result.status() == ToolStatus.APPROVAL_REQUIRED) {
+      remember(
+          request.runId(),
+          actionId + "-approval",
+          MemoryKind.PENDING_ACTION,
+          "Approval required for " + action.tool() + " with digest " + result.actionDigest(),
+          Set.of("tool:" + action.tool()),
+          true);
       var paused =
           update(
               checkpoint,
@@ -237,6 +462,13 @@ public final class AgentRuntime {
     }
     var steps = checkpoint.steps() + 1;
     if (!result.successful()) {
+      remember(
+          request.runId(),
+          actionId + "-failure",
+          MemoryKind.FAILURE,
+          result.error().code() + ": " + result.error().message(),
+          Set.of("tool:" + action.tool()),
+          true);
       var repeated =
           digest.equals(checkpoint.lastFailedDigest()) ? checkpoint.repeatedFailures() + 1 : 1;
       var retries = checkpoint.retries() + 1;
@@ -259,6 +491,13 @@ public final class AgentRuntime {
       return new ToolOutcome(failed, false);
     }
     var observation = result.output() == null ? "tool succeeded" : result.output().toString();
+    remember(
+        request.runId(),
+        actionId + "-success",
+        MemoryKind.FACT,
+        observation,
+        Set.of("tool:" + action.tool(), "journal:" + actionId),
+        true);
     return new ToolOutcome(
         update(
             checkpoint,
@@ -394,6 +633,7 @@ public final class AgentRuntime {
       String failedDigest,
       int repeated,
       String observation) {
+    ensureLease(old.runId());
     var value =
         new AgentCheckpoint(
             old.runId(),
@@ -413,8 +653,74 @@ public final class AgentRuntime {
   }
 
   private void event(AgentCheckpoint checkpoint, String type, Map<String, String> attributes) {
-    var sequence = trace.events(checkpoint.runId()).size() + 1;
-    trace.append(new TraceEvent(checkpoint.runId(), sequence, type, clock.instant(), attributes));
+    trace.record(checkpoint.runId(), type, clock.instant(), attributes);
+  }
+
+  private void remember(
+      String runId,
+      String id,
+      MemoryKind kind,
+      String content,
+      Set<String> sources,
+      boolean verified) {
+    memories.append(
+        new TaskMemory(
+            id,
+            runId,
+            kind,
+            content.isBlank() ? "empty observation" : content,
+            sources,
+            verified,
+            clock.instant(),
+            clock.instant().plus(Duration.ofDays(7))));
+  }
+
+  private void ensureLease(String runId) {
+    var current = activeLeases.get(runId);
+    if (current == null) {
+      return;
+    }
+    var renewed =
+        leases
+            .renew(current, clock.instant(), leaseTtl)
+            .orElseThrow(() -> new LeaseLostException("run lease was lost for " + runId));
+    activeLeases.put(runId, renewed);
+  }
+
+  private AgentRuntimeResult leaseConflict(String runId) {
+    var previous =
+        checkpoints
+            .load(runId)
+            .orElse(
+                new AgentCheckpoint(
+                    runId,
+                    RuntimeStatus.PLANNING,
+                    null,
+                    0,
+                    0,
+                    ModelUsage.NONE,
+                    clock.instant(),
+                    clock.instant(),
+                    null,
+                    "",
+                    0,
+                    ""));
+    var checkpoint =
+        new AgentCheckpoint(
+            runId,
+            RuntimeStatus.LEASE_CONFLICT,
+            previous.plan(),
+            previous.steps(),
+            previous.retries(),
+            previous.usage(),
+            previous.startedAt(),
+            clock.instant(),
+            previous.pendingAction(),
+            previous.lastFailedDigest(),
+            previous.repeatedFailures(),
+            "run is owned by another process");
+    var report = report(checkpoint, null);
+    return new AgentRuntimeResult(checkpoint, null, report);
   }
 
   private RunReport report(AgentCheckpoint checkpoint, VerificationOutcome verificationOutcome) {
