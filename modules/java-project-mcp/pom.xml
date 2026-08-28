@@ -12,6 +12,7 @@
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-tool-maven</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-sandbox-docker</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-observability</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-agent-runtime</artifactId><version>${project.version}</version></dependency>
   </dependencies>
   <build><plugins><plugin>
     <groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId>

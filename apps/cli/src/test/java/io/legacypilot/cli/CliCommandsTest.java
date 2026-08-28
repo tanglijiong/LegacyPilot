@@ -27,10 +27,15 @@ import io.legacypilot.domain.task.Requirement;
 import io.legacypilot.domain.task.Task;
 import io.legacypilot.domain.task.TaskId;
 import io.legacypilot.model.ModelUsage;
+import io.legacypilot.observability.InMemoryTraceSink;
+import io.legacypilot.observability.SensitiveDataRedactor;
 import io.legacypilot.runtime.AgentCheckpoint;
 import io.legacypilot.runtime.AgentRuntime;
 import io.legacypilot.runtime.AgentRuntimeResult;
 import io.legacypilot.runtime.ApprovalStore;
+import io.legacypilot.runtime.CapabilityRequest;
+import io.legacypilot.runtime.CapabilityService;
+import io.legacypilot.runtime.InMemoryCapabilityGrantStore;
 import io.legacypilot.runtime.RecoveryCoordinator;
 import io.legacypilot.runtime.RuntimeApproval;
 import io.legacypilot.runtime.RuntimeStatus;
@@ -38,7 +43,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -226,6 +233,62 @@ class CliCommandsTest {
                             "2")));
     assertTrue(text.contains("reference-ceiling"));
     assertTrue(text.contains("\"status\":\"PASSED\""));
+  }
+
+  @Test
+  void issuesAndRevokesScopedCapabilitiesWithoutPrintingStoredTokenDigests() {
+    var clock = Clock.fixed(NOW, ZoneOffset.UTC);
+    var service =
+        new CapabilityService(
+            new InMemoryCapabilityGrantStore(),
+            new InMemoryTraceSink(new SensitiveDataRedactor(8_192)),
+            clock);
+    var digest = "a".repeat(64);
+    var issuedText =
+        capture(
+            () ->
+                assertEquals(
+                    0,
+                    new CommandLine(new CapabilityIssueCommand(service, output(), clock))
+                        .execute(
+                            "--subject",
+                            "alice",
+                            "--session",
+                            "mcp-1",
+                            "--run",
+                            "run-1",
+                            "--tool",
+                            "apply_patch",
+                            "--workspace",
+                            temporary.toString(),
+                            "--action-digest",
+                            digest,
+                            "--ttl",
+                            "PT1M")));
+    assertTrue(issuedText.contains("\"token\""));
+    var issued =
+        service.issue(
+            new CapabilityRequest(
+                "alice",
+                "mcp-1",
+                "run-1",
+                "apply_patch",
+                temporary,
+                digest,
+                "",
+                NOW.plusSeconds(60),
+                1));
+    var revoked =
+        captureResult(
+            () ->
+                new CommandLine(new CapabilityRevokeCommand(service, output()))
+                    .execute(issued.capability().id()));
+    assertEquals(0, revoked.exitCode());
+    assertTrue(revoked.text().contains("\"revoked\":true"));
+    assertEquals(
+        2,
+        new CommandLine(new CapabilityRevokeCommand(service, output()))
+            .execute("cap-000000000000000000000000"));
   }
 
   private static JsonOutput output() {

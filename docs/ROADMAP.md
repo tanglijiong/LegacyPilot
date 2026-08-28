@@ -43,7 +43,7 @@
 
 ## v0.2 — Strong Harness
 
-**当前进度：** 第一阶段 Issues 21–26 已完成；第二阶段 Issues 27–32 已规划，详见 [`NEXT_TASK_ISSUES_27_32.md`](NEXT_TASK_ISSUES_27_32.md)。
+**当前进度：** 第一阶段 Issues 21–26 与第二阶段 Issues 27–32 的本地工程实现均已完成；真实 provider、Docker 和发布证据仍按 release checklist 单独验收。详见 [`NEXT_TASK_ISSUES_27_32.md`](NEXT_TASK_ISSUES_27_32.md)。
 
 ### 目标
 

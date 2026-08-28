@@ -6,9 +6,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.legacypilot.analysis.java.JavaProjectIndexer;
+import io.legacypilot.context.DeterministicEmbeddingProvider;
+import io.legacypilot.context.FileVectorStore;
+import io.legacypilot.context.PersistentVectorRetriever;
+import io.legacypilot.context.VectorIndexer;
+import io.legacypilot.model.FakeModelGateway;
+import io.legacypilot.model.ModelErrorType;
+import io.legacypilot.model.ModelException;
+import io.legacypilot.model.ModelGateway;
+import io.legacypilot.model.ModelProfile;
+import io.legacypilot.model.ModelRequest;
+import io.legacypilot.model.ModelResult;
+import io.legacypilot.model.ModelRoutingBudget;
+import io.legacypilot.model.ProviderCircuitBreaker;
+import io.legacypilot.model.RoutingModelGateway;
 import io.legacypilot.observability.InMemoryTraceSink;
 import io.legacypilot.observability.SensitiveDataRedactor;
+import io.legacypilot.runtime.ActionStatus;
+import io.legacypilot.runtime.CapabilityRequest;
+import io.legacypilot.runtime.CapabilityService;
+import io.legacypilot.runtime.InMemoryActionJournal;
+import io.legacypilot.runtime.InMemoryCapabilityGrantStore;
+import io.legacypilot.runtime.InMemoryRunLeaseStore;
+import io.legacypilot.tool.filesystem.ApplyPatchTool;
 import io.legacypilot.tool.filesystem.ReadFileTool;
+import io.legacypilot.tool.spi.ActionDigests;
 import io.legacypilot.tool.spi.AgentTool;
 import io.legacypilot.tool.spi.DefaultExecutionPolicy;
 import io.legacypilot.tool.spi.Idempotency;
@@ -22,13 +45,19 @@ import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,6 +149,119 @@ class McpServerTest {
     assertEquals(-32601, responses.get(4).at("/error/code").asInt());
   }
 
+  @Test
+  void writeToolRequiresScopedCapabilityConsumesItAndNeverReplaysPatch() throws Exception {
+    var source = workspace.resolve("src/main/App.java");
+    Files.createDirectories(source.getParent());
+    Files.writeString(source, "before");
+    var tools = new ArrayList<AgentTool>();
+    tools.add(new ApplyPatchTool(java.util.List.of("src/**")));
+    var registry = new ToolRegistry(tools);
+    var executor = new ToolExecutor(registry, new DefaultExecutionPolicy(), MAPPER);
+    var clock = Clock.fixed(Instant.parse("2026-08-28T00:00:00Z"), ZoneOffset.UTC);
+    var localTrace = new InMemoryTraceSink(new SensitiveDataRedactor(512));
+    var capabilities = new CapabilityService(new InMemoryCapabilityGrantStore(), localTrace, clock);
+    var journal = new InMemoryActionJournal();
+    var secureBridge =
+        new McpToolBridge(
+            "mcp-test",
+            workspace,
+            registry,
+            executor,
+            localTrace,
+            MAPPER,
+            clock,
+            capabilities,
+            journal,
+            new InMemoryRunLeaseStore());
+    var input =
+        MAPPER
+            .createObjectNode()
+            .put("path", "src/main/App.java")
+            .put("expectedSha256", sha256("before"))
+            .put("replacement", "after");
+    assertEquals(1, secureBridge.listTools().size());
+    assertEquals(
+        "CAPABILITY_REQUIRED",
+        secureBridge.call("project.apply_patch", input).path("errorCode").asText());
+    var issued =
+        capabilities.issue(
+            new CapabilityRequest(
+                "alice",
+                "mcp-test",
+                "run-write",
+                "apply_patch",
+                workspace,
+                ActionDigests.create("apply_patch", input),
+                "",
+                clock.instant().plusSeconds(60),
+                1));
+    var arguments = MAPPER.createObjectNode();
+    arguments.set(
+        "authorization",
+        MAPPER
+            .createObjectNode()
+            .put("token", issued.token())
+            .put("subject", "alice")
+            .put("runId", "run-write"));
+    arguments.set("input", input);
+    var success = secureBridge.call("project.apply_patch", arguments);
+    assertFalse(success.path("isError").asBoolean());
+    assertEquals("after", Files.readString(source));
+    assertEquals(ActionStatus.SUCCEEDED, journal.records("run-write").getFirst().status());
+
+    Files.writeString(source, "externally-changed");
+    var replay = secureBridge.call("project.apply_patch", arguments);
+    assertEquals("CAPABILITY_DENIED", replay.path("errorCode").asText());
+    assertEquals("externally-changed", Files.readString(source));
+    var fresh =
+        capabilities.issue(
+            new CapabilityRequest(
+                "alice",
+                "mcp-test",
+                "run-write",
+                "apply_patch",
+                workspace,
+                ActionDigests.create("apply_patch", input),
+                "",
+                clock.instant().plusSeconds(60),
+                1));
+    arguments.withObject("authorization").put("token", fresh.token());
+    var changedEffect = secureBridge.call("project.apply_patch", arguments);
+    assertEquals("NEEDS_REVIEW", changedEffect.path("errorCode").asText());
+    assertEquals("externally-changed", Files.readString(source));
+
+    var routingEvents = new ArrayList<io.legacypilot.model.ModelRouteEvent>();
+    var routed =
+        new RoutingModelGateway(
+            List.of(
+                new ModelProfile("primary", "p1", "model-a", Set.of(), 20),
+                new ModelProfile("fallback", "p2", "model-b", Set.of(), 10)),
+            Map.of(
+                "p1",
+                failingModel(),
+                "p2",
+                new FakeModelGateway(List.of(new Answer("safe")), MAPPER)),
+            new ModelRoutingBudget(2, 100, BigDecimal.ONE),
+            new ProviderCircuitBreaker(1, Duration.ofMinutes(1), clock),
+            routingEvents::add,
+            clock);
+    assertEquals("safe", routed.generate(modelRequest(), Answer.class).value().value());
+    assertEquals(2, routingEvents.size());
+
+    var fixture = Path.of("../..", "samples", "banking-demo").toAbsolutePath().normalize();
+    var index = new JavaProjectIndexer().index(fixture, "governed-mcp-e2e");
+    var embeddings = new DeterministicEmbeddingProvider("hash-v1", 64);
+    var vectors =
+        new FileVectorStore(workspace.resolve("vectors.json"), MAPPER.findAndRegisterModules());
+    new VectorIndexer(embeddings, vectors).synchronize(index);
+    var retrieval =
+        new PersistentVectorRetriever(embeddings, vectors)
+            .retrieveWithStatus(index, "TransferService daily limit", 10);
+    assertFalse(retrieval.degraded());
+    assertFalse(retrieval.candidates().isEmpty());
+  }
+
   private JsonNode json(String value) {
     try {
       return MAPPER.readTree(value);
@@ -151,4 +293,32 @@ class McpServerTest {
       }
     };
   }
+
+  private static String sha256(String value) throws Exception {
+    return HexFormat.of()
+        .formatHex(
+            MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+  }
+
+  private static ModelGateway failingModel() {
+    return new ModelGateway() {
+      @Override
+      public <T> ModelResult<T> generate(ModelRequest request, Class<T> responseType) {
+        throw new ModelException(ModelErrorType.TIMEOUT, "transient", true);
+      }
+    };
+  }
+
+  private static ModelRequest modelRequest() {
+    return new ModelRequest(
+        "system",
+        "user",
+        JsonSchemas.parse("{\"type\":\"object\"}"),
+        "ignored",
+        0,
+        Duration.ofSeconds(1),
+        Map.of());
+  }
+
+  record Answer(String value) {}
 }

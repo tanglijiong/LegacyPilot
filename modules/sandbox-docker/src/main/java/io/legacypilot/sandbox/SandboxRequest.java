@@ -12,7 +12,27 @@ public record SandboxRequest(
     Path dependencyCache,
     List<String> command,
     Map<String, String> environment,
-    SandboxLimits limits) {
+    SandboxLimits limits,
+    SandboxPhase phase) {
+
+  public SandboxRequest(
+      String executionId,
+      String image,
+      Path workspace,
+      Path dependencyCache,
+      List<String> command,
+      Map<String, String> environment,
+      SandboxLimits limits) {
+    this(
+        executionId,
+        image,
+        workspace,
+        dependencyCache,
+        command,
+        environment,
+        limits,
+        SandboxPhase.EXECUTION);
+  }
 
   public SandboxRequest {
     Objects.requireNonNull(executionId, "executionId must not be null");
@@ -21,6 +41,7 @@ public record SandboxRequest(
     Objects.requireNonNull(command, "command must not be null");
     Objects.requireNonNull(environment, "environment must not be null");
     Objects.requireNonNull(limits, "limits must not be null");
+    Objects.requireNonNull(phase, "sandbox phase must not be null");
     if (!executionId.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,95}")) {
       throw new IllegalArgumentException("executionId is invalid");
     }
@@ -38,6 +59,9 @@ public record SandboxRequest(
         });
     workspace = workspace.toAbsolutePath().normalize();
     dependencyCache = dependencyCache == null ? null : dependencyCache.toAbsolutePath().normalize();
+    if (phase == SandboxPhase.DEPENDENCY_PREWARM && dependencyCache == null) {
+      throw new IllegalArgumentException("dependency prewarm requires a cache");
+    }
     command = List.copyOf(command);
     environment = Map.copyOf(environment);
   }

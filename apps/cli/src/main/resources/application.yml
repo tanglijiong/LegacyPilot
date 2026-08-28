@@ -16,6 +16,8 @@ logging:
     root: ERROR
 
 legacy-pilot:
+  policy:
+    file: ${LEGACY_PILOT_POLICY_FILE:}
   workspace:
     root: ${LEGACY_PILOT_WORK_ROOT:${user.dir}/.legacy-pilot}
   agent:

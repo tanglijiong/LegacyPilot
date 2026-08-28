@@ -40,10 +40,13 @@ import io.legacypilot.runtime.AgentPlanner;
 import io.legacypilot.runtime.AgentRunRequestStore;
 import io.legacypilot.runtime.AgentRuntime;
 import io.legacypilot.runtime.ApprovalStore;
+import io.legacypilot.runtime.CapabilityGrantStore;
+import io.legacypilot.runtime.CapabilityService;
 import io.legacypilot.runtime.CheckpointStore;
 import io.legacypilot.runtime.FileActionJournal;
 import io.legacypilot.runtime.FileAgentRunRequestStore;
 import io.legacypilot.runtime.FileApprovalStore;
+import io.legacypilot.runtime.FileCapabilityGrantStore;
 import io.legacypilot.runtime.FileCheckpointStore;
 import io.legacypilot.runtime.FileRunLeaseStore;
 import io.legacypilot.runtime.FileTaskMemoryStore;
@@ -60,6 +63,8 @@ import io.legacypilot.tool.git.GitDiffTool;
 import io.legacypilot.tool.maven.MavenTool;
 import io.legacypilot.tool.spi.AgentTool;
 import io.legacypilot.tool.spi.DefaultExecutionPolicy;
+import io.legacypilot.tool.spi.ExecutionPolicy;
+import io.legacypilot.tool.spi.PolicyLoader;
 import io.legacypilot.tool.spi.ToolExecutor;
 import io.legacypilot.tool.spi.ToolRegistry;
 import io.legacypilot.verification.DiffPolicyCheck;
@@ -265,8 +270,19 @@ public class LegacyPilotCoreConfiguration {
   }
 
   @Bean
-  ToolExecutor toolExecutor(ToolRegistry registry, ObjectMapper mapper) {
-    return new ToolExecutor(registry, new DefaultExecutionPolicy(), mapper);
+  ExecutionPolicy executionPolicy(@Value("${legacy-pilot.policy.file:}") String policyFile) {
+    if (policyFile.isBlank()) {
+      return new DefaultExecutionPolicy();
+    }
+    var loader = new PolicyLoader(PolicyLoader.secureDefault());
+    loader.reload(Path.of(policyFile));
+    return loader;
+  }
+
+  @Bean
+  ToolExecutor toolExecutor(
+      ToolRegistry registry, ExecutionPolicy executionPolicy, ObjectMapper mapper) {
+    return new ToolExecutor(registry, executionPolicy, mapper);
   }
 
   @Bean
@@ -303,6 +319,19 @@ public class LegacyPilotCoreConfiguration {
       @Value("${legacy-pilot.agent.state-root:${user.dir}/.legacy-pilot/agent}") Path stateRoot,
       ObjectMapper mapper) {
     return new FileApprovalStore(stateRoot.resolve("approvals.json"), mapper);
+  }
+
+  @Bean
+  CapabilityGrantStore capabilityGrantStore(
+      @Value("${legacy-pilot.agent.state-root:${user.dir}/.legacy-pilot/agent}") Path stateRoot,
+      ObjectMapper mapper) {
+    return new FileCapabilityGrantStore(stateRoot.resolve("capabilities.json"), mapper);
+  }
+
+  @Bean
+  CapabilityService capabilityService(
+      CapabilityGrantStore capabilities, TraceSink trace, Clock clock) {
+    return new CapabilityService(capabilities, trace, clock);
   }
 
   @Bean

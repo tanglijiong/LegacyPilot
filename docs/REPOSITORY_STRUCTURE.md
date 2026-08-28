@@ -88,22 +88,22 @@ LegacyPilot/
 | `domain` | Task、Plan、State、Approval、Verification 等纯领域模型 | Spring、模型厂商、数据库实现 |
 | `application` | 生命周期 Use Cases 与向内的 Repository/Workspace ports | Controller、数据库和 Git 实现 |
 | `bootstrap` | 组合 Application ports 与 Adapter 的 Spring 配置 | 业务规则复制 |
-| `agent-runtime` | 状态机、Agent Loop、Budget、Planner/Context/Evaluator 协作 | 具体 Tool、具体模型 SDK |
-| `model-spi` | 厂商无关的模型请求、Structured Output、Usage | Spring AI 实现细节 |
+| `agent-runtime` | 状态机、Agent Loop、Budget、Journal/Lease/Recovery、Capability | 具体 Tool、具体模型 SDK |
+| `model-spi` | 厂商无关的模型请求、Structured Output、Usage、路由/Fallback/熔断 | Spring AI 实现细节 |
 | `model-spring-ai` | 基于 Spring AI 的模型适配器 | 反向污染 domain |
 | `java-analyzer` | AST、符号、Spring 角色、引用和依赖边 | LLM 调用 |
-| `context-engine` | 多路召回、排序、图扩展、Token packing | 具体 API/UI |
-| `tool-spi` | Tool 契约、描述符、风险、错误语义 | 具体工具实现 |
+| `context-engine` | 多路召回、Vector Store、Reranker、图扩展、Compaction/Memory | 具体 API/UI |
+| `tool-spi` | Tool 契约、版本化 Policy、描述符、风险、错误语义 | 具体工具实现 |
 | `tool-*` | 文件、Git、Maven 的受控实现 | Agent Runtime 内部状态 |
 | `workspace` | Git clone/worktree、生命周期、路径边界 | 模型调用 |
-| `sandbox-docker` | 容器执行、资源与网络限制 | 业务计划逻辑 |
+| `sandbox-docker` | 容器执行、资源/网络限制、依赖预热与内容寻址缓存 | 业务计划逻辑 |
 | `verification` | 编译、测试、静态分析、风险和终态证据 | 模型对“完成”的声明 |
 | `observability` | Trace、Metric、脱敏、导出 | 业务决策 |
 | `durable-state` | 版本化 JSON envelope、原子替换、迁移、备份与损坏隔离 | Agent/业务类型 |
 | `persistence` | Repository 实现与迁移 | Controller 逻辑 |
 | `reporting` | JSON/Markdown 报告 | 直接执行工具 |
 | `evaluation` | 数据集解析、Runner、指标聚合 | 特定 Demo 的硬编码 |
-| `java-project-mcp` | 将允许工具暴露为 MCP | 绕过 Tool Runtime/Policy |
+| `java-project-mcp` | 将允许工具通过 Capability/Policy/Journal 暴露为 MCP | 绕过 Tool Runtime/Policy |
 
 ## 4. 依赖方向
 

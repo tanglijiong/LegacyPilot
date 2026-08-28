@@ -4,15 +4,17 @@
 
 **版本目标：** v0.2 Strong Harness 第二阶段
 
-**状态：** Planned
+**状态：** Engineering Complete
 
 **规划日期：** 2026-08-28
 
+**完成日期：** 2026-08-28
+
 ## 当前未完成任务清点
 
-### A. 已完成但尚未形成提交
+### A. 前置基线
 
-Issues 21–26 的实现、文档和本地验收已经完成，全仓 104 个测试通过，当前改动仍在工作区。开始本任务前应先审阅并提交这一批改动，形成可回退的稳定基线；该动作不计为新的产品 Issue。
+Issues 21–26 的实现、文档和本地验收已提交为 `ecbcfcb`，形成了本阶段可回退的稳定基线。
 
 ### B. v0.1 外部发布动作
 
@@ -25,7 +27,7 @@ Issues 21–26 的实现、文档和本地验收已经完成，全仓 104 个测
 5. 录制不使用 reference overlay 的公开演示 GIF/视频。
 6. 审阅发布证据后创建并推送 `v0.1.0` tag。
 
-### C. v0.2 剩余工程缺口
+### C. 实施前 v0.2 工程缺口
 
 - `DefaultExecutionPolicy` 仍按风险等级硬编码，缺少版本化规则、规则解释、冲突优先级和回归矩阵。
 - 审批能够绑定 plan/action digest，但还没有面向外部客户端的短期、最小权限 capability grant。
@@ -33,6 +35,19 @@ Issues 21–26 的实现、文档和本地验收已经完成，全仓 104 个测
 - Model Gateway 只有单 provider 调用链，没有按阶段/成本路由、有限 fallback 和熔断证据。
 - Vector Retriever 只有可插拔空壳，尚无正式存储实现、Reranker 和对比基线。
 - Docker 默认无网络且缓存只读，但缺少依赖预热、内容寻址缓存、镜像 digest 策略和完整的有 Docker 验收证据。
+
+## 完成结果
+
+| Issue | 已交付能力 | 验收证据 |
+| --- | --- | --- |
+| 27 | 版本化 YAML/JSON Policy、确定性冲突优先级、path/tool/risk/idempotency 匹配、secure-default reload、rule/revision 解释 | 默认行为兼容，50 组确定性安全矩阵、损坏/未来版本保留上一策略测试通过 |
+| 28 | Opaque Capability、磁盘仅存 digest、session/run/tool/workspace/action/plan 绑定、原子消费、撤销/过期、CLI/REST | 50 路并发一次性 token 只有一个成功消费者；错 scope、撤销、过期和重放全部拒绝 |
+| 29 | MCP `project.apply_patch`、Capability + Policy + Journal + Lease、结构化错误、效果核对与 `NEEDS_REVIEW` | 无授权不写入；合法授权只写一次；已消费 token 重放拒绝；workspace 效果变化后进入人工审查 |
+| 30 | Model Profile 路由、共享尝试/token/费用预算、有限 fallback、provider circuit breaker、route events | transient/permanent/invalid/budget/circuit-open/recovery Fake provider 矩阵通过 |
+| 31 | Embedding/Vector/Reranker 端口、本地版本化 Vector Store、revision/model/file digest 隔离、显式 degraded | stale replacement、revision 删除、provider 降级、lexical/vector/hybrid/rerank Recall@K 与 MRR 对比通过 |
+| 32 | 网络预热与离线执行分离、内容寻址 Maven cache、digest image policy、缓存链接/容量边界、日志脱敏、综合 MCP/模型/检索 E2E | 无 Docker 合同测试通过；真实预热/离线 Banking 测试在 daemon/image 不可用时明确 skip |
+
+全仓 `clean verify` 已通过：126 个测试，0 failure、0 error、2 skipped；两个跳过项都是本机 Docker daemon 不可用时的真实 Docker 集成测试。聚合 JaCoCo 指令覆盖率 88.0%、分支覆盖率 66.9%、行覆盖率 88.3%。Spotless、编译、测试、JaCoCo、SpotBugs 和依赖规则均在同一轮构建中通过。
 
 ### D. 后续版本，不纳入本阶段
 
@@ -154,7 +169,7 @@ Issues 21–26 的实现、文档和本地验收已经完成，全仓 104 个测
   └── 31 Vector Store 与 Reranker ─────────────────────────────┘
 ```
 
-27–29 必须串行，以免先开放写工具再补授权边界。30 和 31 可在授权模型稳定后独立推进，32 最后统一验证跨模块行为和发布证据。
+实际按安全依赖完成：27–29 先建立策略、授权和 MCP 写闭环；30–31 再加入模型与检索韧性；32 最后完成 Docker 合同和跨模块验收。
 
 ## 建议检查点
 

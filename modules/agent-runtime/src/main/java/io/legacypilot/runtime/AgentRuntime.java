@@ -332,6 +332,17 @@ public final class AgentRuntime {
               "digest", digest,
               "scope", approval.scope().name()));
     }
+    if (existing != null
+        && existing.status() == ActionStatus.SUCCEEDED
+        && !confirmedEffect(action, request.workspace())) {
+      existing =
+          existing.transition(
+              ActionStatus.NEEDS_REVIEW,
+              existing.attempts(),
+              "recorded success no longer matches workspace effect",
+              clock.instant());
+      journal.save(existing);
+    }
     if (existing != null && existing.status() == ActionStatus.SUCCEEDED) {
       event(checkpoint, "action.replay.skipped", Map.of("actionId", actionId, "digest", digest));
       remember(
@@ -437,7 +448,17 @@ public final class AgentRuntime {
     event(
         checkpoint,
         "tool.completed",
-        Map.of("tool", action.tool(), "status", result.status().name(), "digest", digest));
+        Map.of(
+            "tool",
+            action.tool(),
+            "status",
+            result.status().name(),
+            "digest",
+            digest,
+            "policyRuleId",
+            result.policyRuleId(),
+            "policyRevision",
+            result.policyRevision()));
     if (result.status() == ToolStatus.APPROVAL_REQUIRED) {
       remember(
           request.runId(),
@@ -757,6 +778,24 @@ public final class AgentRuntime {
     var report = report(checkpoint, verificationOutcome);
     reports.save(report);
     return new AgentRuntimeResult(checkpoint, verificationOutcome, report);
+  }
+
+  private static boolean confirmedEffect(AgentAction action, java.nio.file.Path workspace) {
+    if (!action.tool().equals("apply_patch")) {
+      return true;
+    }
+    try {
+      var relative = java.nio.file.Path.of(action.input().path("path").asText()).normalize();
+      var target = workspace.toAbsolutePath().normalize().resolve(relative).normalize();
+      return !relative.isAbsolute()
+          && !relative.startsWith("..")
+          && target.startsWith(workspace.toAbsolutePath().normalize())
+          && java.nio.file.Files.isRegularFile(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)
+          && java.nio.file.Files.readString(target)
+              .equals(action.input().path("replacement").asText());
+    } catch (RuntimeException | java.io.IOException exception) {
+      return false;
+    }
   }
 
   private static final class InMemoryReportStore implements ReportStore {

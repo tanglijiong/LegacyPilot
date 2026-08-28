@@ -60,22 +60,22 @@ public final class ToolExecutor {
     }
     var decision = policy.evaluate(descriptor, context, safeInput);
     if (decision.effect() == PolicyDecision.Effect.DENY) {
-      return failure(
+      return policyFailure(
           ToolStatus.POLICY_DENIED,
           ToolErrorCode.POLICY_DENIED,
           decision.reason(),
-          decision.actionDigest(),
+          decision,
           started);
     }
     if (decision.effect() == PolicyDecision.Effect.REQUIRE_APPROVAL) {
-      return failure(
+      return policyFailure(
           ToolStatus.APPROVAL_REQUIRED,
           ToolErrorCode.APPROVAL_REQUIRED,
           decision.reason(),
-          decision.actionDigest(),
+          decision,
           started);
     }
-    return invoke(tool, context, safeInput, decision.actionDigest(), started);
+    return invoke(tool, context, safeInput, decision, started);
   }
 
   public java.util.Optional<ToolDescriptor> descriptor(String toolName) {
@@ -83,7 +83,12 @@ public final class ToolExecutor {
   }
 
   private ToolResult invoke(
-      AgentTool tool, ToolContext context, JsonNode input, String digest, Instant started) {
+      AgentTool tool,
+      ToolContext context,
+      JsonNode input,
+      PolicyDecision decision,
+      Instant started) {
+    var digest = decision.actionDigest();
     Future<JsonNode> future = null;
     try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
       future = executor.submit(() -> tool.execute(context, input));
@@ -102,9 +107,25 @@ public final class ToolExecutor {
           > tool.descriptor().maxOutputBytes()) {
         var summary = mapper.createObjectNode();
         summary.put("message", "Tool output exceeded its size limit");
-        return new ToolResult(ToolStatus.SUCCESS, summary, null, digest, elapsed(started), true);
+        return new ToolResult(
+            ToolStatus.SUCCESS,
+            summary,
+            null,
+            digest,
+            elapsed(started),
+            true,
+            decision.ruleId(),
+            decision.policyRevision());
       }
-      return new ToolResult(ToolStatus.SUCCESS, redacted, null, digest, elapsed(started), false);
+      return new ToolResult(
+          ToolStatus.SUCCESS,
+          redacted,
+          null,
+          digest,
+          elapsed(started),
+          false,
+          decision.ruleId(),
+          decision.policyRevision());
     } catch (TimeoutException exception) {
       if (future != null) {
         future.cancel(true);
@@ -161,6 +182,23 @@ public final class ToolExecutor {
       ToolStatus status, ToolErrorCode code, String message, String digest, Instant started) {
     return new ToolResult(
         status, null, new ToolError(code, message), digest, elapsed(started), false);
+  }
+
+  private static ToolResult policyFailure(
+      ToolStatus status,
+      ToolErrorCode code,
+      String message,
+      PolicyDecision decision,
+      Instant started) {
+    return new ToolResult(
+        status,
+        null,
+        new ToolError(code, message),
+        decision.actionDigest(),
+        elapsed(started),
+        false,
+        decision.ruleId(),
+        decision.policyRevision());
   }
 
   private static Duration elapsed(Instant started) {

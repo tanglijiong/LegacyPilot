@@ -16,8 +16,9 @@
 | [长期任务：Agent 执行闭环](NEXT_TASK_ISSUES_12_16.md) | 已完成 Issue 12–16 的模型网关、Agent Loop、审批、验证和可观测性验收结果 |
 | [MCP、Demo 与 Eval](NEXT_TASK_ISSUES_17_20.md) | Issue 17–20 工程验收结果与仍需人工完成的发布动作 |
 | [可恢复长任务 Harness](NEXT_TASK_ISSUES_21_26.md) | 已完成 Issues 21–26 的版本化状态、Journal、Lease、持久 Trace、Memory 与故障验收 |
-| [受治理工具链与模型韧性](NEXT_TASK_ISSUES_27_32.md) | Issues 27–32：Policy DSL、Capability、MCP 写工具、多模型、向量检索与 Docker 加固计划 |
+| [受治理工具链与模型韧性](NEXT_TASK_ISSUES_27_32.md) | 已完成 Issues 27–32 的规划、实现与验收结果 |
 | [恢复机制运维指南](RESILIENT_HARNESS.md) | 版本化状态、Journal、Lease、Trace、Memory 与故障恢复 |
+| [受治理 Harness 指南](GOVERNED_HARNESS.md) | Policy、Capability、MCP 写工具、模型路由、Vector/Reranker 和 Docker 依赖治理 |
 | [Quickstart](QUICKSTART.md) | 在新环境构建、运行 Eval、启动 MCP 和排查常见故障 |
 | [MCP Server](MCP_SERVER.md) | STDIO 配置、工具清单和安全边界 |
 | [Eval Harness](EVALS.md) | 五任务数据集、指标和基线解释 |

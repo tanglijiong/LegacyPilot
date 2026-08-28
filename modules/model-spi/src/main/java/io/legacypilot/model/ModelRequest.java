@@ -48,4 +48,9 @@ public record ModelRequest(
         timeout,
         metadata);
   }
+
+  public ModelRequest withModel(String selectedModel) {
+    return new ModelRequest(
+        systemPrompt, userPrompt, outputSchema, selectedModel, temperature, timeout, metadata);
+  }
 }

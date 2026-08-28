@@ -9,13 +9,19 @@ import java.util.Set;
 final class DockerCommandFactory {
 
   private final String dockerExecutable;
-  private final Set<String> allowedImages;
+  private final DockerImagePolicy imagePolicy;
   private final Set<String> allowedExecutables;
   private final Set<String> allowedEnvironment;
+  private final boolean networkedPrewarmAllowed;
 
   DockerCommandFactory(
       Set<String> allowedImages, Set<String> allowedExecutables, Set<String> allowedEnvironment) {
-    this("docker", allowedImages, allowedExecutables, allowedEnvironment);
+    this(
+        "docker",
+        DockerImagePolicy.allowlisted(allowedImages),
+        allowedExecutables,
+        allowedEnvironment,
+        false);
   }
 
   DockerCommandFactory(
@@ -23,16 +29,29 @@ final class DockerCommandFactory {
       Set<String> allowedImages,
       Set<String> allowedExecutables,
       Set<String> allowedEnvironment) {
+    this(
+        dockerExecutable,
+        DockerImagePolicy.allowlisted(allowedImages),
+        allowedExecutables,
+        allowedEnvironment,
+        false);
+  }
+
+  DockerCommandFactory(
+      String dockerExecutable,
+      DockerImagePolicy imagePolicy,
+      Set<String> allowedExecutables,
+      Set<String> allowedEnvironment,
+      boolean networkedPrewarmAllowed) {
     this.dockerExecutable = dockerExecutable;
-    this.allowedImages = Set.copyOf(allowedImages);
+    this.imagePolicy = imagePolicy;
     this.allowedExecutables = Set.copyOf(allowedExecutables);
     this.allowedEnvironment = Set.copyOf(allowedEnvironment);
+    this.networkedPrewarmAllowed = networkedPrewarmAllowed;
   }
 
   List<String> create(String containerName, SandboxRequest request) {
-    if (!allowedImages.contains(request.image())) {
-      throw new IllegalArgumentException("sandbox image is not allowlisted");
-    }
+    imagePolicy.validate(request.image());
     if (!allowedExecutables.contains(request.command().getFirst())) {
       throw new IllegalArgumentException("sandbox executable is not allowlisted");
     }
@@ -49,6 +68,9 @@ final class DockerCommandFactory {
       }
       validateMountPath(request.dependencyCache().toString());
     }
+    if (request.phase() == SandboxPhase.DEPENDENCY_PREWARM && !networkedPrewarmAllowed) {
+      throw new IllegalArgumentException("networked dependency prewarm is disabled");
+    }
 
     var limits = request.limits();
     var command = new ArrayList<String>();
@@ -60,7 +82,7 @@ final class DockerCommandFactory {
             "--name",
             containerName,
             "--network",
-            "none",
+            request.phase() == SandboxPhase.DEPENDENCY_PREWARM ? "bridge" : "none",
             "--read-only",
             "--cap-drop",
             "ALL",
@@ -88,7 +110,10 @@ final class DockerCommandFactory {
       command.addAll(
           List.of(
               "--mount",
-              "type=bind,src=" + request.dependencyCache() + ",dst=/maven-cache,readonly"));
+              "type=bind,src="
+                  + request.dependencyCache()
+                  + ",dst=/maven-cache,"
+                  + (request.phase() == SandboxPhase.DEPENDENCY_PREWARM ? "rw" : "readonly")));
     }
     request.environment().entrySet().stream()
         .sorted(java.util.Map.Entry.comparingByKey())

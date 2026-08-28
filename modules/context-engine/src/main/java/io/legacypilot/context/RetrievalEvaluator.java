@@ -21,4 +21,17 @@ public final class RetrievalEvaluator {
             .count();
     return (double) found / relevantSymbolIds.size();
   }
+
+  public static double reciprocalRank(
+      List<EvidenceCandidate> candidates, Set<String> relevantSymbolIds) {
+    if (relevantSymbolIds.isEmpty()) {
+      throw new IllegalArgumentException("relevant ids must be provided");
+    }
+    for (var index = 0; index < candidates.size(); index++) {
+      if (relevantSymbolIds.contains(candidates.get(index).symbolId())) {
+        return 1.0 / (index + 1);
+      }
+    }
+    return 0;
+  }
 }

@@ -1,0 +1,27 @@
+schemaVersion: 1
+revision: secure-default-v1
+rules:
+  - id: deny-external-io
+    effect: DENY
+    risks: [EXTERNAL_IO]
+    reason: external I/O is disabled
+  - id: approve-workspace-write
+    effect: REQUIRE_APPROVAL
+    risks: [WORKSPACE_WRITE]
+    reason: workspace write requires an action-bound approval
+    requiredScope: action
+  - id: allow-command-enabled
+    effect: ALLOW
+    risks: [COMMAND_EXECUTION]
+    commandExecutionAllowed: true
+    reason: command execution enabled for this run
+  - id: approve-command
+    effect: REQUIRE_APPROVAL
+    risks: [COMMAND_EXECUTION]
+    commandExecutionAllowed: false
+    reason: command execution requires approval
+    requiredScope: action
+  - id: allow-read-only
+    effect: ALLOW
+    risks: [READ_ONLY]
+    reason: read-only tool

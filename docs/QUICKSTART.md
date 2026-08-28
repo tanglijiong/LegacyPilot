@@ -49,6 +49,20 @@ java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar agent-recover
 
 默认持久状态位于 `.legacy-pilot/agent`。`agent-recover` 只恢复安全的非终态任务，不会越过 `WAITING_FOR_APPROVAL` 或 `NEEDS_REVIEW`。迁移、lease 和故障处理细节见[恢复机制运维指南](RESILIENT_HARNESS.md)。
 
+## 6. 启用版本化策略和签发 MCP 写授权
+
+```bash
+export LEGACY_PILOT_POLICY_FILE="$(pwd)/config/policy-default.yml"
+
+java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar \
+  capability-issue \
+  --subject reviewer --session mcp-stdio --run run-123 \
+  --tool apply_patch --workspace "$(pwd)/samples/banking-demo" \
+  --action-digest ACTION_SHA256 --ttl PT10M
+```
+
+Token 只在签发响应中返回一次。将它放入 `project.apply_patch` 的 `authorization` envelope；不要写入配置、日志或版本库。完整规则和调用格式见[受治理 Harness 指南](GOVERNED_HARNESS.md)。
+
 ## 故障排查
 
 | 症状 | 检查 |
@@ -61,4 +75,7 @@ java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar agent-recover
 | Agent 状态无法读取 | 运行 `agent-state-check RUN_ID`；保留 `.corrupt` 和 `.previous` 文件供诊断 |
 | 返回 `LEASE_CONFLICT` | 另一个 Runtime 正持有该 run；等待 lease 到期或让当前 owner 正常结束 |
 | 返回 `NEEDS_REVIEW` | 上次工具效果无法确认；检查 diff/构建证据后重新提交 action-bound approval |
+| MCP 写操作返回 `CAPABILITY_DENIED` | 检查 token 是否过期/已消费，以及 subject、session、run、workspace、tool 和 action digest 是否完全匹配 |
+| 自定义 Policy 未生效 | 检查 schema version、唯一 rule ID 和相对 path prefix；无效 reload 会保留 secure default |
+| Vector 返回 degraded | 检查 embedding provider、model/维度和 revision；lexical/graph 检索仍会继续 |
 | 真实模型不可用 | 配置一个 Spring AI `ChatModel` Bean；不要把 key 写入仓库配置 |

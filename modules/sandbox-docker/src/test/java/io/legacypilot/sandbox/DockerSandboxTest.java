@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -215,6 +216,130 @@ class DockerSandboxTest {
                 limits(Duration.ofSeconds(1), 4096, 10_000_000)));
   }
 
+  @Test
+  void separatesNetworkedPrewarmFromOfflineReadonlyExecutionAndRequiresPinnedImages()
+      throws Exception {
+    var workspace = Files.createDirectory(temporary.resolve("governed-workspace"));
+    var cache = Files.createDirectory(temporary.resolve("governed-cache"));
+    var pinned = "registry.example/maven@sha256:" + "a".repeat(64);
+    var factory =
+        new DockerCommandFactory(
+            "docker-test",
+            DockerImagePolicy.digestPinned(Set.of(pinned)),
+            Set.of("mvn"),
+            Set.of(),
+            true);
+    var prewarm =
+        factory.create(
+            "prewarm",
+            new SandboxRequest(
+                "prewarm",
+                pinned,
+                workspace,
+                cache,
+                List.of("mvn", "dependency:go-offline"),
+                Map.of(),
+                limits(Duration.ofSeconds(1), 4096, 10_000_000),
+                SandboxPhase.DEPENDENCY_PREWARM));
+    assertEquals("bridge", prewarm.get(prewarm.indexOf("--network") + 1));
+    assertTrue(prewarm.stream().anyMatch(value -> value.endsWith("dst=/maven-cache,rw")));
+
+    var offline =
+        factory.create(
+            "offline",
+            new SandboxRequest(
+                "offline",
+                pinned,
+                workspace,
+                cache,
+                List.of("mvn", "test"),
+                Map.of(),
+                limits(Duration.ofSeconds(1), 4096, 10_000_000)));
+    assertEquals("none", offline.get(offline.indexOf("--network") + 1));
+    assertTrue(offline.stream().anyMatch(value -> value.endsWith("dst=/maven-cache,readonly")));
+    assertFalse(offline.contains("--privileged"));
+    assertFalse(offline.contains("host"));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> DockerImagePolicy.digestPinned(Set.of("maven:latest")));
+  }
+
+  @Test
+  void createsContentAddressedCachesRejectsLinksAndEnforcesSize() throws Exception {
+    var workspace = Files.createDirectory(temporary.resolve("cache-workspace"));
+    Files.writeString(workspace.resolve("pom.xml"), "<project>one</project>");
+    var root = temporary.resolve("managed-caches");
+    var manager = new DependencyCacheManager(root, 1024 * 1024);
+    var first = manager.cacheFor(workspace);
+    assertEquals(first, manager.cacheFor(workspace));
+    Files.writeString(workspace.resolve("pom.xml"), "<project>two</project>");
+    var second = manager.cacheFor(workspace);
+    assertFalse(first.equals(second));
+    Files.writeString(second.resolve("large.bin"), "x".repeat(1024 * 1024 + 1));
+    assertThrows(IllegalArgumentException.class, () -> manager.validate(second));
+
+    var linked = root.resolve("linked");
+    try {
+      Files.createSymbolicLink(linked, first);
+      assertThrows(IllegalArgumentException.class, () -> manager.validate(linked));
+    } catch (UnsupportedOperationException exception) {
+      // The remaining cache boundary checks still apply on file systems without symlinks.
+    }
+  }
+
+  @Test
+  void redactsCredentialShapedDockerOutput() throws Exception {
+    var workspace = Files.createDirectory(temporary.resolve("redaction-workspace"));
+    var sandbox = sandbox(fakeDocker(true));
+    var result =
+        sandbox.execute(
+            request(
+                "redact",
+                workspace,
+                null,
+                List.of("mvn", "credential"),
+                Map.of(),
+                limits(Duration.ofSeconds(2), 4096, 10_000_000)));
+    assertTrue(result.output().contains("api_key=[REDACTED]"));
+    assertFalse(result.output().contains("plain-secret"));
+  }
+
+  @Test
+  void provisionsContentAddressedMavenCacheThroughExplicitPrewarmPhase() throws Exception {
+    var workspace = Files.createDirectory(temporary.resolve("prewarm-workspace"));
+    Files.writeString(workspace.resolve("pom.xml"), "<project/>");
+    var captured = new AtomicReference<SandboxRequest>();
+    SandboxExecutor executor =
+        new SandboxExecutor() {
+          @Override
+          public SandboxResult execute(SandboxRequest request) {
+            captured.set(request);
+            return new SandboxResult(
+                request.executionId(), SandboxStatus.SUCCESS, 0, "ready", Duration.ZERO, false);
+          }
+
+          @Override
+          public boolean cancel(String executionId) {
+            return false;
+          }
+
+          @Override
+          public boolean available() {
+            return true;
+          }
+        };
+    var provisioned =
+        new MavenDependencyProvisioner(
+                executor,
+                new DependencyCacheManager(temporary.resolve("prewarm-caches"), 10_000_000),
+                "image:1")
+            .prewarm(workspace, limits(Duration.ofSeconds(1), 4096, 10_000_000));
+    assertTrue(provisioned.result().successful());
+    assertEquals(provisioned.path(), captured.get().dependencyCache());
+    assertEquals(SandboxPhase.DEPENDENCY_PREWARM, captured.get().phase());
+    assertTrue(captured.get().command().contains("dependency:go-offline"));
+  }
+
   private DockerSandbox sandbox(Path executable) {
     return new DockerSandbox(executable.toString(), Set.of("image:1"), Set.of("mvn"), Set.of());
   }
@@ -233,6 +358,7 @@ class DockerSandboxTest {
           if [ "$value" = "huge" ]; then
             i=0; while [ $i -lt 3000 ]; do printf x; i=$((i + 1)); done; exit 0
           fi
+          if [ "$value" = "credential" ]; then echo api_key=plain-secret; exit 0; fi
         done
         echo success
         exit 0

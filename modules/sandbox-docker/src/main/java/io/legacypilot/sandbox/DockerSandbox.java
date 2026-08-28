@@ -38,6 +38,22 @@ public final class DockerSandbox implements SandboxExecutor {
             dockerExecutable, allowedImages, allowedExecutables, allowedEnvironment);
   }
 
+  public DockerSandbox(
+      String dockerExecutable,
+      DockerImagePolicy imagePolicy,
+      Set<String> allowedExecutables,
+      Set<String> allowedEnvironment,
+      boolean networkedPrewarmAllowed) {
+    this.dockerExecutable = dockerExecutable;
+    this.commands =
+        new DockerCommandFactory(
+            dockerExecutable,
+            imagePolicy,
+            allowedExecutables,
+            allowedEnvironment,
+            networkedPrewarmAllowed);
+  }
+
   public static DockerSandbox secureMavenDefaults() {
     return new DockerSandbox(
         Set.of(DEFAULT_MAVEN_IMAGE), Set.of("mvn"), Set.of("MAVEN_OPTS", "JAVA_TOOL_OPTIONS"));
@@ -223,7 +239,17 @@ public final class DockerSandbox implements SandboxExecutor {
       Instant started,
       boolean truncated) {
     return new SandboxResult(
-        executionId, status, exitCode, output, Duration.between(started, Instant.now()), truncated);
+        executionId,
+        status,
+        exitCode,
+        redact(output),
+        Duration.between(started, Instant.now()),
+        truncated);
+  }
+
+  private static String redact(String output) {
+    return output.replaceAll(
+        "(?i)(token|password|secret|api[_-]?key)(\\s*[:=]\\s*)[^\\s]+", "$1$2[REDACTED]");
   }
 
   private record Output(String text, boolean truncated) {}

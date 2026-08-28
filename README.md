@@ -45,7 +45,10 @@ Token / Cost / Duration: recorded
 - 受控工具调用：文件系统、Git、Maven、代码搜索与补丁应用
 - Docker / Git worktree 隔离执行与命令白名单
 - Human-in-the-loop 审批和风险分级
-- MCP Server：将 Java 项目与 Maven 能力开放给兼容客户端
+- 版本化 Policy DSL 与短期最小权限 Capability Grant
+- MCP Server：将 Java 项目、受权补丁与 Maven 能力开放给兼容客户端
+- 多模型有限 Fallback、Provider 熔断与路由证据
+- Revision-scoped Vector Store、Reranker 与显式降级
 - Trace、Token、Cost、Duration 等运行观测
 - 版本化 Checkpoint、Action Journal、Run Lease 和跨进程安全恢复
 - 可重复运行的 Eval 数据集与成功率基准
@@ -76,15 +79,16 @@ Token / Cost / Duration: recorded
 - [已完成长期任务：Issue 12–16](docs/NEXT_TASK_ISSUES_12_16.md)
 - [Issue 17–20 工程验收与发布待办](docs/NEXT_TASK_ISSUES_17_20.md)
 - [已完成长期任务：Issues 21–26 可恢复 Harness](docs/NEXT_TASK_ISSUES_21_26.md)
-- [下一长期任务：Issues 27–32 受治理工具链与模型韧性](docs/NEXT_TASK_ISSUES_27_32.md)
+- [已完成长期任务：Issues 27–32 受治理工具链与模型韧性](docs/NEXT_TASK_ISSUES_27_32.md)
 - [可恢复 Harness 运维指南](docs/RESILIENT_HARNESS.md)
+- [受治理 Harness 指南](docs/GOVERNED_HARNESS.md)
 - [30 分钟 Quickstart](docs/QUICKSTART.md)
 - [MCP Server](docs/MCP_SERVER.md)
 - [Eval Harness 与公开基线](docs/EVALS.md)
 
 ## 当前状态
 
-Issues 01–19、Issues 21–26 及 Issue 20 的工程/文档部分已完成：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、STDIO MCP、可运行 Banking Demo、五任务 Eval，以及带 Journal/Lease/持久 Trace/Context Compaction 的可恢复长任务 Harness。真实模型五任务分数、公开演示视频和 `v0.1.0` tag 仍按[发布清单](docs/RELEASE_CHECKLIST_V0.1.md)等待人工发布条件。
+Issues 01–19、21–32 及 Issue 20 的工程/文档部分已完成：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可运行 Banking Demo、五任务 Eval、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。真实模型五任务分数、公开演示视频和发布 tag 仍按[发布清单](docs/RELEASE_CHECKLIST_V0.1.md)等待人工发布条件。
 
 ## 本地开发
 
@@ -117,7 +121,7 @@ Issues 01–19、Issues 21–26 及 Issue 20 的工程/文档部分已完成：�
 java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar --help
 ```
 
-CLI 还支持 `agent-approve`、`agent-resume`、`agent-state-check`、`agent-recover` 和五任务 `eval-run`。默认数据和受管 worktree 位于当前目录的 `.legacy-pilot/`；可分别通过 `LEGACY_PILOT_DATA_DIR`、`LEGACY_PILOT_WORK_ROOT` 与 `LEGACY_PILOT_AGENT_STATE_ROOT` 调整。
+CLI 还支持 `agent-approve`、`agent-resume`、`agent-state-check`、`agent-recover`、`capability-issue`、`capability-revoke` 和五任务 `eval-run`。默认数据和受管 worktree 位于当前目录的 `.legacy-pilot/`；可分别通过 `LEGACY_PILOT_DATA_DIR`、`LEGACY_PILOT_WORK_ROOT` 与 `LEGACY_PILOT_AGENT_STATE_ROOT` 调整。
 
 本地项目注册会拒绝 dirty 仓库、submodule 和 Git LFS；远程注册仅接受不带凭证的公开 HTTP(S) Git URL。
 

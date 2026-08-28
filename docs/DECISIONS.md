@@ -114,6 +114,34 @@
 - **原因：** checkpoint 本身不能消除“工具已生效但 checkpoint 未保存”的崩溃窗口，盲目重放写操作会扩大破坏。
 - **后果：** 已确认成功动作可安全跳过；外部命令不宣称理论 exactly-once；恢复可能要求人工检查，但不会用可用性换取不受控重放。
 
+## ADR-017：工具治理采用版本化 Policy 与 Opaque Capability
+
+- **状态：** Accepted
+- **决策：** Policy 负责可解释的 allow/approval/deny，Capability 负责外部调用方的短期最小权限；MCP 写操作必须同时通过两者。
+- **原因：** 审批 digest 不能直接充当可跨边界传输的凭证，而仅凭客户端身份开放写操作会破坏默认安全边界。
+- **后果：** token 只返回一次且磁盘只保存 digest；调用需要严格绑定 session、run、workspace、tool 和 action，增加了签发步骤但支持撤销和重放拒绝。
+
+## ADR-018：模型 Fallback 仅处理暂时性 Provider 故障
+
+- **状态：** Accepted
+- **决策：** 只对 retryable 限流、超时和 provider unavailable 做有限 fallback；结构错误、认证、预算和策略错误不得换模型绕过。
+- **原因：** 无限制 fallback 会放大费用，也可能把安全或契约错误误判为可用性问题。
+- **后果：** 所有 profile 共享尝试/token/费用预算，并通过 circuit breaker 和 route event 提供证据。
+
+## ADR-019：Vector 必须绑定 Revision，并可降级到确定性检索
+
+- **状态：** Accepted
+- **决策：** 向量条目绑定 revision、embedding model/维度、文件 digest 和 symbol range；provider 故障明确标记 degraded，Exact/BM25/Graph 始终保留。
+- **原因：** 跨 revision stale evidence 比缺少 vector recall 更危险，且开源本地运行不能依赖单一外部向量服务。
+- **后果：** 增量同步按 revision/model 替换，默认检索配置必须由固定数据集 Recall/MRR 基准决定。
+
+## ADR-020：依赖联网预热与 Agent 离线执行分离
+
+- **状态：** Accepted
+- **决策：** Maven 依赖获取只在显式预热阶段联网；Agent compile/test 阶段固定无网络并只读挂载内容寻址缓存。
+- **原因：** 运行时临时联网同时扩大供应链和数据外传风险，也降低可复现性。
+- **后果：** 需要独立缓存生命周期和容量治理；依赖缺失时离线执行明确失败，不能自行开放网络。
+
 ## 待决问题
 
 | 编号 | 问题 | 决定时间点 |
