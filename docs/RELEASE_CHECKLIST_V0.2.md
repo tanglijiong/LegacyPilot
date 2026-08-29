@@ -14,7 +14,7 @@
 - [x] Maven project version is `0.2.0` with no stale `0.1.0-SNAPSHOT` runtime commands
 - [x] JDK 21 full `clean verify` passes: 127 tests, 0 failures, 0 errors, 0 skipped
 - [x] Real Docker integration tests execute 2/2 with no skips
-- [ ] Fresh-clone Quickstart completes within 30 minutes
+- [x] Fresh-clone Quickstart completes within 30 minutes: 12m55s on `fa39f54`
 - [x] Five-task real-model regression is recorded against the commit containing Issues 21–32
 - [x] Model, Prompt/strategy, price and environment are recorded
 - [ ] CI, Security and Eval smoke pass on the exact release commit
