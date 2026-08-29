@@ -1,0 +1,44 @@
+name: Publish v0.1 and v0.2 releases
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/publish-v0.2-releases.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release notes and tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Publish v0.1.0 if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view v0.1.0 >/dev/null 2>&1; then
+            gh release create v0.1.0 \
+              --verify-tag \
+              --title "LegacyPilot v0.1.0" \
+              --notes-file docs/releases/v0.1.0.md
+          fi
+
+      - name: Publish v0.2.0 if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view v0.2.0 >/dev/null 2>&1; then
+            gh release create v0.2.0 \
+              --verify-tag \
+              --latest \
+              --title "LegacyPilot v0.2.0" \
+              --notes-file docs/releases/v0.2.0.md
+          fi
