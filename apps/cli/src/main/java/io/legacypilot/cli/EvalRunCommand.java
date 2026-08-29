@@ -4,6 +4,7 @@ import io.legacypilot.eval.EvalDatasetLoader;
 import io.legacypilot.eval.EvalRunner;
 import io.legacypilot.eval.MavenFixtureVerifier;
 import io.legacypilot.eval.ReferenceBaselineExecutor;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -18,7 +19,7 @@ import picocli.CommandLine.Option;
 public class EvalRunCommand implements Callable<Integer> {
   private final JsonOutput output;
 
-  @Option(names = "--dataset", defaultValue = "evals/datasets/v0.1")
+  @Option(names = "--dataset", defaultValue = "evals/datasets/v0.3")
   private Path dataset;
 
   @Option(names = "--fixture", defaultValue = "samples/banking-demo")
@@ -39,14 +40,25 @@ public class EvalRunCommand implements Callable<Integer> {
 
   @Override
   public Integer call() {
-    var tasks = new EvalDatasetLoader().load(dataset);
+    var loader = new EvalDatasetLoader();
+    var verifier = new MavenFixtureVerifier(mavenWrapper, Duration.ofMinutes(3));
+    var versioned = Files.isRegularFile(dataset.resolve("manifest.yml"));
+    var loaded = versioned ? loader.loadVersioned(dataset) : null;
+    var tasks = versioned ? loaded.tasks() : loader.load(dataset);
     var executor =
-        new ReferenceBaselineExecutor(
-            fixture, references, new MavenFixtureVerifier(mavenWrapper, Duration.ofMinutes(2)));
+        versioned
+            ? new ReferenceBaselineExecutor(
+                loaded.fixtures().entrySet().stream()
+                    .collect(
+                        java.util.stream.Collectors.toMap(
+                            Map.Entry::getKey, entry -> entry.getValue().path())),
+                references,
+                verifier)
+            : new ReferenceBaselineExecutor(fixture, references, verifier);
     var summary =
         new EvalRunner(Clock.systemUTC())
             .run(
-                "v0.1",
+                versioned ? loaded.datasetVersion() : "v0.1",
                 "reference-ceiling",
                 "planner-v1",
                 "policy-v1",

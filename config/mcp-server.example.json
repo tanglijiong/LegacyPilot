@@ -4,7 +4,7 @@
       "command": "java",
       "args": [
         "-jar",
-        "/absolute/path/to/LegacyPilot/modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.2.0.jar",
+        "/absolute/path/to/LegacyPilot/modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.3.0-SNAPSHOT.jar",
         "/absolute/path/to/fixed/java/workspace"
       ]
     }

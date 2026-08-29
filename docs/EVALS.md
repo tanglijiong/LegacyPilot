@@ -4,10 +4,14 @@
 
 ```bash
 ./mvnw -q -pl apps/cli -am package
-java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar eval-run
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 ```
 
-也可在开发环境直接运行 `EvalRunCommand`，通过 `--dataset`、`--fixture`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数。
+默认加载经过 manifest 和 fixture digest 验证的 `evals/datasets/v0.3` draft。也可通过 `--dataset`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数；`--fixture` 仅用于兼容没有 manifest 的 v0.1 数据集。v2 契约详见 [Eval Dataset v2 与 Fixture 治理](EVAL_DATASET_V2.md)。
+
+## Dataset v0.3 draft
+
+`v0.3-draft.1` 先将原始五任务迁移到新 schema，用于验证固定任务顺序、fixture provenance、SHA-256、文件修改范围、超时和资源预算。它不是最终 v0.3 基线；task-006–020 完成后才会冻结 20-task manifest。
 
 ## Dataset v0.1
 

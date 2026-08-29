@@ -1,0 +1,14 @@
+schemaVersion: eval-fixture-v1
+id: banking-fixture-v2
+source: repository:samples/banking-demo
+revision: banking-fixture-v2
+license: Apache-2.0
+sha256: 149eb1aa6d369cfd3855da8b96b820f7f344f8642d62af5f7b62c69b1db90f48
+path: ../../../samples/banking-demo
+buildCommand:
+  - ../../mvnw
+  - --batch-mode
+  - --no-transfer-progress
+  - -f
+  - pom.xml
+  - test

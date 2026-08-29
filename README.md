@@ -66,7 +66,7 @@ Token / Cost / Duration: recorded
 - Maven、JUnit、JaCoCo、SpotBugs/Checkstyle
 - Docker、PostgreSQL/pgvector（按阶段启用）
 - Micrometer、OpenTelemetry
-- React Dashboard（v0.3）
+- 自包含静态 Eval Dashboard（v0.3）
 
 项目采用 Java 优先的模块化单体设计。v0.1 先完成可运行的端到端闭环，避免在验证价值前引入多 Agent、Kubernetes、IDE 插件或模型微调。
 
@@ -92,6 +92,7 @@ Token / Cost / Duration: recorded
 - [30 分钟 Quickstart](docs/QUICKSTART.md)
 - [MCP Server](docs/MCP_SERVER.md)
 - [Eval Harness 与公开基线](docs/EVALS.md)
+- [Eval Dataset v2 与 Fixture 治理](docs/EVAL_DATASET_V2.md)
 - [公开演示证据](docs/PUBLIC_DEMO.md)
 
 ## 当前状态
@@ -126,7 +127,7 @@ v0.1.0 发布证据已完成：系统具备 Java 代码智能、受控工具、A
 
 ```bash
 ./mvnw -pl apps/cli -am package
-java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar --help
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar --help
 ```
 
 CLI 还支持 `agent-approve`、`agent-resume`、`agent-state-check`、`agent-recover`、`capability-issue`、`capability-revoke` 和五任务 `eval-run`。默认数据和受管 worktree 位于当前目录的 `.legacy-pilot/`；可分别通过 `LEGACY_PILOT_DATA_DIR`、`LEGACY_PILOT_WORK_ROOT` 与 `LEGACY_PILOT_AGENT_STATE_ROOT` 调整。

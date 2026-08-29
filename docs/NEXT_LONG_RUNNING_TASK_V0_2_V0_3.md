@@ -2,7 +2,7 @@
 
 **覆盖建议 Issues：** 33–40
 **阶段目标：** 先发布可审计的 `v0.2.0`，再用 20 个核心任务（30 个为 stretch）证明策略、模型和检索改动是否真的提升质量
-**状态：** Planned
+**状态：** In progress — v0.2 已发布，Issue 34 已完成，Issue 35 task pack A 开始实施
 **规划日期：** 2026-08-29
 
 ## 1. 为什么这样收敛
@@ -57,6 +57,8 @@ LegacyPilot 的核心价值是可治理、可恢复、可评测的 Java Agent Ha
 - 发布提交工作区干净，三项远端工作流通过，tag 与 GitHub Release 指向同一提交。
 
 ### Issue 34 — Eval v0.2 Schema、fixture registry 与数据治理
+
+**实施状态（2026-08-29）：** 已完成。`v0.3-draft.1` 已迁移原五任务；manifest/task/fixture digest、provenance、稳定任务顺序、允许/禁止文件、资源预算、symlink 与越界路径 fail-closed 检查均已落地。五任务 reference ceiling 为 5/5，篡改与文件范围测试通过。正式 20-task manifest 仍须等 Issue 35/36 后冻结。
 
 #### 工作内容
 

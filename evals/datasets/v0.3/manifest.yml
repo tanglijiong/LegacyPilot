@@ -1,0 +1,10 @@
+schemaVersion: eval-dataset-v2
+datasetVersion: v0.3-draft.1
+datasetSha256: 3a4c6ef10889a9f7736cc9cca45305f273a3c238f526c2c67017be5a962aaa38
+fixtureRegistry: ../../fixtures
+tasks:
+  - task-001
+  - task-002
+  - task-003
+  - task-004
+  - task-005

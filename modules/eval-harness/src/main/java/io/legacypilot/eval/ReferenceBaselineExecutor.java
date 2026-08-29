@@ -12,22 +12,50 @@ import java.util.List;
 import java.util.Objects;
 
 public final class ReferenceBaselineExecutor implements EvalTaskExecutor {
-  private final Path fixture;
+  private final Path defaultFixture;
+  private final java.util.Map<String, Path> fixtures;
   private final Path referenceSolutions;
   private final FixtureVerifier verifier;
   private final SourceAssertionEngine assertions = new SourceAssertionEngine();
 
   public ReferenceBaselineExecutor(
       Path fixture, Path referenceSolutions, FixtureVerifier verifier) {
-    this.fixture = Objects.requireNonNull(fixture).toAbsolutePath().normalize();
+    this.defaultFixture = Objects.requireNonNull(fixture).toAbsolutePath().normalize();
+    this.fixtures = java.util.Map.of();
     this.referenceSolutions =
         Objects.requireNonNull(referenceSolutions).toAbsolutePath().normalize();
     this.verifier = Objects.requireNonNull(verifier);
   }
 
+  public ReferenceBaselineExecutor(
+      java.util.Map<String, Path> fixtures, Path referenceSolutions, FixtureVerifier verifier) {
+    this.defaultFixture = null;
+    var normalizedFixtures = new java.util.LinkedHashMap<String, Path>();
+    Objects.requireNonNull(fixtures)
+        .forEach(
+            (id, path) ->
+                normalizedFixtures.put(
+                    Objects.requireNonNull(id),
+                    Objects.requireNonNull(path).toAbsolutePath().normalize()));
+    this.fixtures = java.util.Map.copyOf(normalizedFixtures);
+    this.referenceSolutions =
+        Objects.requireNonNull(referenceSolutions).toAbsolutePath().normalize();
+    this.verifier = Objects.requireNonNull(verifier);
+    if (this.fixtures.isEmpty()) {
+      throw new IllegalArgumentException("eval fixtures are unavailable");
+    }
+  }
+
   @Override
   public EvalTaskResult execute(EvalTask task) {
     var started = Instant.now();
+    var fixture = fixtures.get(task.fixtureId());
+    if (fixture == null) {
+      fixture = defaultFixture;
+    }
+    if (fixture == null) {
+      throw new IllegalArgumentException("eval task fixture is unavailable");
+    }
     try (var workspace = FixtureWorkspace.copyOf(fixture)) {
       var index = new JavaProjectIndexer().index(workspace.root(), task.fixtureRevision());
       var relevant =

@@ -1,0 +1,5 @@
+- type: FILE_EXISTS
+  path: src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+- type: MATCHES_REGEX
+  path: src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+  value: record\s+TransferQuery\s*\([\s\S]*BigDecimal\s+totalAmount[\s\S]*int\s+count

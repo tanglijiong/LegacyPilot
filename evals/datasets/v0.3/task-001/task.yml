@@ -1,0 +1,24 @@
+id: task-001
+category: domain-model
+difficulty: easy
+changeType: type-safety
+expectedImpact: multi-file
+requirement: Replace the account status string with a type-safe AccountStatus enum containing ACTIVE, FROZEN, and CLOSED.
+fixtureId: banking-fixture-v2
+allowedFiles:
+  - src/main/java/io/legacypilot/samples/banking/Account.java
+  - src/main/java/io/legacypilot/samples/banking/AccountStatus.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/samples/banking/TransferServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/Account.java
+  - src/main/java/io/legacypilot/samples/banking/AccountStatus.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.Account
+maximumSteps: 8
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 24000
+  maximumMemoryMb: 2048
+  maximumCostCents: 250

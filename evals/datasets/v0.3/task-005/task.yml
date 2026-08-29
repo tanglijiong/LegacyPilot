@@ -1,0 +1,29 @@
+id: task-005
+category: concurrency-time
+difficulty: hard
+changeType: domain-rule
+expectedImpact: multi-file
+requirement: Enforce atomic UTC daily transfer limits of 50000 for standard customers and 200000 for VIP customers, including concurrent transfers and day rollover.
+fixtureId: banking-fixture-v2
+allowedFiles:
+  - src/main/java/io/legacypilot/samples/banking/DailyTransferPolicy.java
+  - src/main/java/io/legacypilot/samples/banking/TransferLimitException.java
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/samples/banking/TransferServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/DailyTransferPolicy.java
+  - src/main/java/io/legacypilot/samples/banking/TransferLimitException.java
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.AccountRepository
+  - io.legacypilot.samples.banking.CustomerRepository
+  - io.legacypilot.samples.banking.TransferRepository
+  - io.legacypilot.samples.banking.TransferService
+maximumSteps: 16
+timeoutSeconds: 180
+resourceBudget:
+  maximumTokens: 48000
+  maximumMemoryMb: 2048
+  maximumCostCents: 500

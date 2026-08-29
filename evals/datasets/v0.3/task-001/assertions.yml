@@ -1,0 +1,8 @@
+- type: FILE_EXISTS
+  path: src/main/java/io/legacypilot/samples/banking/AccountStatus.java
+- type: MATCHES_REGEX
+  path: src/main/java/io/legacypilot/samples/banking/AccountStatus.java
+  value: enum\s+AccountStatus[\s\S]*ACTIVE[\s\S]*FROZEN[\s\S]*CLOSED
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/Account.java
+  value: AccountStatus status

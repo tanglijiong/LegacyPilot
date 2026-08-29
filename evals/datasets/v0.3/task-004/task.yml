@@ -1,0 +1,22 @@
+id: task-004
+category: api-contract
+difficulty: easy
+changeType: feature
+expectedImpact: single-file
+requirement: Add an immutable TransferQuery result with accountId, totalAmount, count, from, and to fields.
+fixtureId: banking-fixture-v2
+allowedFiles:
+  - src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/samples/banking/TransferServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.TransferRecord
+maximumSteps: 8
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 24000
+  maximumMemoryMb: 2048
+  maximumCostCents: 250

@@ -1,0 +1,22 @@
+id: task-003
+category: data-boundary
+difficulty: easy
+changeType: defect-fix
+expectedImpact: single-file
+requirement: Reject transfer history queries whose end instant is not after the start instant.
+fixtureId: banking-fixture-v2
+allowedFiles:
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/samples/banking/TransferServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.TransferService#history
+maximumSteps: 8
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 24000
+  maximumMemoryMb: 2048
+  maximumCostCents: 250
