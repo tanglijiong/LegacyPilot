@@ -4,7 +4,7 @@
 
 ```bash
 ./mvnw -q -pl apps/cli -am package
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar eval-run
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar eval-run
 ```
 
 也可在开发环境直接运行 `EvalRunCommand`，通过 `--dataset`、`--fixture`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数。

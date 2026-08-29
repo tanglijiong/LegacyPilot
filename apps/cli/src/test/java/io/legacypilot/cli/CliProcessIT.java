@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -18,7 +19,16 @@ class CliProcessIT {
   @Test
   void packagedCliDisplaysRealCommandHelp() throws IOException, InterruptedException {
     var java = Path.of(System.getProperty("java.home"), "bin", "java");
-    var jar = Path.of("target", "legacy-pilot-cli-0.1.0-SNAPSHOT.jar").toAbsolutePath().normalize();
+    Path jar;
+    try (var candidates = Files.list(Path.of("target"))) {
+      jar =
+          candidates
+              .filter(path -> path.getFileName().toString().matches("legacy-pilot-cli-.+\\.jar"))
+              .findFirst()
+              .orElseThrow(() -> new IOException("Packaged CLI jar not found"))
+              .toAbsolutePath()
+              .normalize();
+    }
     var builder = new ProcessBuilder(java.toString(), "-jar", jar.toString(), "--help");
     builder
         .environment()

@@ -18,7 +18,7 @@
 
 ```bash
 ./mvnw -q -pl apps/cli -am package
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar eval-run
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar eval-run
 ```
 
 输出为结构化 JSON。`reference-ceiling` 用于证明五个任务、参考实现和确定性断言可以全部通过，不代表真实模型成绩。
@@ -27,7 +27,7 @@ java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar eval-run
 
 ```bash
 ./mvnw -q -pl modules/java-project-mcp -am package
-java -jar modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.1.0-SNAPSHOT.jar \
+java -jar modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.2.0.jar \
   "$(pwd)/samples/banking-demo"
 ```
 
@@ -42,9 +42,9 @@ java -jar modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.1.0-SN
 ## 5. 检查和恢复长任务
 
 ```bash
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar \
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar \
   agent-state-check RUN_ID
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar agent-recover
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar agent-recover
 ```
 
 默认持久状态位于 `.legacy-pilot/agent`。`agent-recover` 只恢复安全的非终态任务，不会越过 `WAITING_FOR_APPROVAL` 或 `NEEDS_REVIEW`。迁移、lease 和故障处理细节见[恢复机制运维指南](RESILIENT_HARNESS.md)。
@@ -54,7 +54,7 @@ java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar agent-recover
 ```bash
 export LEGACY_PILOT_POLICY_FILE="$(pwd)/config/policy-default.yml"
 
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar \
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar \
   capability-issue \
   --subject reviewer --session mcp-stdio --run run-123 \
   --tool apply_patch --workspace "$(pwd)/samples/banking-demo" \

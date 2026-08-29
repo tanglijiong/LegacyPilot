@@ -226,5 +226,5 @@ v0.1 发布门槛：
 - 至少 5 个 Eval 任务及基线结果。
 - 示例任务的 Markdown/JSON 验证报告。
 - 最小 MCP Server 和客户端调用示例。
-- Docker Compose 本地运行方式。
+- 本地单进程/H2 运行方式。Server/PostgreSQL Docker Compose 明确延期，不作为 v0.1/v0.2 发布门槛；Docker 在当前版本用于受限 Maven sandbox。
 - README 演示 GIF/录屏和完整复现步骤。

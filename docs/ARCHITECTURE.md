@@ -311,7 +311,7 @@ v0.2 第二阶段在执行边界前增加版本化 Policy DSL 与短期 Opaque C
 
 ## 13. 部署形态
 
-v0.1 使用 Docker Compose：Server、PostgreSQL（可选 pgvector）和观测组件。CLI 可以以本地进程连接 Server，也可启用单进程开发模式。
+v0.1/v0.2 的可复现开发路径使用本地单进程与 H2；Docker 用于受限 Maven sandbox，而不是应用部署。Server、PostgreSQL（可选 pgvector）和观测组件的 Docker Compose 部署明确延期，待出现共享服务或持久化部署需求后再进入范围。
 
 生产级多租户、远程沙箱集群和 Kubernetes 不属于 v0.1。
 

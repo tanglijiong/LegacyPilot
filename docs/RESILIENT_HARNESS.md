@@ -66,11 +66,11 @@ Recovery Coordinator 对状态进行分类：
 
 ```bash
 # 检查 request/checkpoint 是否缺失、旧版、当前、未知或损坏
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar \
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar \
   agent-state-check RUN_ID
 
 # 扫描非终态运行；审批态和人工审查态不会自动越过
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar \
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar \
   agent-recover
 ```
 

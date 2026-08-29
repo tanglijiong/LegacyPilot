@@ -333,6 +333,7 @@
 
 ## Issue 12 — 实现厂商无关 Model Gateway 与 Spring AI Adapter
 
+**Status：** ✅ Completed
 **Labels：** `type:feature`, `area:model`, `priority:P0`
 **Milestone：** M3 Agent Loop
 **Depends on：** 01、02
@@ -360,6 +361,7 @@
 
 ## Issue 13 — 实现 Planner 与 Plan→Act→Observe→Verify Agent Loop
 
+**Status：** ✅ Completed
 **Labels：** `type:feature`, `area:runtime`, `priority:P0`
 **Milestone：** M3 Agent Loop
 **Depends on：** 02、09、10、12
@@ -387,6 +389,7 @@
 
 ## Issue 14 — 实现 Plan/Action 审批门与恢复执行
 
+**Status：** ✅ Completed
 **Labels：** `type:feature`, `area:approval`, `security`, `priority:P0`
 **Milestone：** M3 Agent Loop
 **Depends on：** 03、10、13
@@ -414,6 +417,7 @@
 
 ## Issue 15 — 实现 Verification Pipeline 与修复反馈
 
+**Status：** ✅ Completed
 **Labels：** `type:feature`, `area:verification`, `priority:P0`
 **Milestone：** M3 Agent Loop
 **Depends on：** 05、11、13
@@ -441,6 +445,7 @@
 
 ## Issue 16 — 实现 Agent Trace、指标、脱敏和 Markdown/JSON 报告
 
+**Status：** ✅ Completed
 **Labels：** `type:feature`, `area:observability`, `priority:P0`
 **Milestone：** M3 Agent Loop
 **Depends on：** 02、12、13、15
@@ -468,6 +473,7 @@
 
 ## Issue 17 — 实现最小 Java Project / Maven MCP Server
 
+**Status：** ✅ Completed
 **Labels：** `type:feature`, `area:mcp`, `priority:P1`
 **Milestone：** M4 Open Protocol & Evidence
 **Depends on：** 09、10、11、16
@@ -495,6 +501,7 @@
 
 ## Issue 18 — 创建 Banking Demo 与第一条每日转账限额任务
 
+**Status：** ✅ Completed
 **Labels：** `type:demo`, `area:samples`, `priority:P0`
 **Milestone：** M4 Open Protocol & Evidence
 **Depends on：** 01
@@ -522,6 +529,7 @@
 
 ## Issue 19 — 构建 5 个任务的 Eval Runner、指标和基线
 
+**Status：** ✅ Completed
 **Labels：** `type:feature`, `area:evaluation`, `priority:P0`
 **Milestone：** M4 Open Protocol & Evidence
 **Depends on：** 15、16、18
@@ -549,6 +557,7 @@
 
 ## Issue 20 — 完成端到端发布验收、文档、Demo 与 v0.1.0
 
+**Status：** ✅ Completed（`v0.1.0`）
 **Labels：** `type:release`, `area:docs`, `priority:P0`
 **Milestone：** M4 Open Protocol & Evidence
 **Depends on：** 03-19

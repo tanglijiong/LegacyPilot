@@ -24,6 +24,9 @@
 | [MCP Server](MCP_SERVER.md) | STDIO 配置、工具清单和安全边界 |
 | [Eval Harness](EVALS.md) | 五任务数据集、指标和基线解释 |
 | [公开演示证据](PUBLIC_DEMO.md) | 无 reference overlay 的真实模型演示、完整性检查与媒体文件 |
+| [v0.2 迁移说明](MIGRATION_V0.2.md) | 从 v0.1 状态、授权、模型、检索与 Docker 契约迁移到 v0.2 |
+| [v0.2 发布清单](RELEASE_CHECKLIST_V0.2.md) | v0.2 工程、验证与发布证据 |
+| [依赖升级审阅](DEPENDENCY_REVIEW_2026-08-29.md) | v0.2 发布时九个 Dependabot 大版本 PR 的处置 |
 
 ## 版本定义
 

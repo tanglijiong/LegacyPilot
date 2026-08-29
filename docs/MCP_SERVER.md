@@ -6,7 +6,7 @@ LegacyPilot 提供一个本地 STDIO MCP Server，将会话绑定到启动时指
 
 ```bash
 ./mvnw -pl modules/java-project-mcp -am package
-java -jar modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.1.0-SNAPSHOT.jar \
+java -jar modules/java-project-mcp/target/legacy-pilot-java-project-mcp-0.2.0.jar \
   /absolute/path/to/fixed/workspace
 ```
 

@@ -126,7 +126,7 @@ v0.1.0 发布证据已完成：系统具备 Java 代码智能、受控工具、A
 
 ```bash
 ./mvnw -pl apps/cli -am package
-java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar --help
+java -jar apps/cli/target/legacy-pilot-cli-0.2.0.jar --help
 ```
 
 CLI 还支持 `agent-approve`、`agent-resume`、`agent-state-check`、`agent-recover`、`capability-issue`、`capability-revoke` 和五任务 `eval-run`。默认数据和受管 worktree 位于当前目录的 `.legacy-pilot/`；可分别通过 `LEGACY_PILOT_DATA_DIR`、`LEGACY_PILOT_WORK_ROOT` 与 `LEGACY_PILOT_AGENT_STATE_ROOT` 调整。
