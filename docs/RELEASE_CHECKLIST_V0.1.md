@@ -20,8 +20,8 @@
 - [x] 在具有 provider credentials 的隔离环境运行真实模型五任务基线，并提交模型、价格表和环境信息（GPT-5.4：首次 1/5，单次公开断言反馈重试后 5/5）
 - [x] 在全新环境按 Quickstart 完成 30 分钟 smoke task（16 分 12 秒；[证据](QUICKSTART_SMOKE_2026-08-29.md)）
 - [x] 在可用 Docker daemon 上通过 Docker 集成测试（2/2；[证据](QUICKSTART_SMOKE_2026-08-29.md)）
-- [ ] 确认远端 CI、Security 和 Eval smoke 工作流通过
+- [x] 确认远端工作流通过（`5dedd285`：[CI](https://github.com/tanglijiong/LegacyPilot/actions/runs/33235703354)、[Security](https://github.com/tanglijiong/LegacyPilot/actions/runs/33235703378)、[Eval smoke](https://github.com/tanglijiong/LegacyPilot/actions/runs/33235703386)）
 - [x] 录制不使用 reference overlay 的公开演示（[GIF](assets/demo/legacy-pilot-task-005-real-model.gif) / [MP4](assets/demo/legacy-pilot-task-005-real-model.mp4) / [证据说明](PUBLIC_DEMO.md)）
-- [ ] 在发布 commit 上创建并推送 `v0.1.0` tag
+- [x] 在发布 commit 上创建并推送 `v0.1.0` tag
 
-发布 tag 仍应等待本次变更与 smoke/演示证据提交并推送，以及远端 CI、Security、Eval smoke 工作流通过。
+v0.1.0 的源码、真实模型基线、全新环境 smoke、真实 Docker 测试、公开演示和远端工作流证据均已完成。

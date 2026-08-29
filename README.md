@@ -95,7 +95,7 @@ Token / Cost / Duration: recorded
 
 ## 当前状态
 
-Issues 01–19、21–32 及 Issue 20 的工程/文档部分已完成：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可运行 Banking Demo、五任务 Eval、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。真实模型五任务基线和无 reference overlay 的公开演示已经记录；远端工作流确认与发布 tag 仍按[发布清单](docs/RELEASE_CHECKLIST_V0.1.md)等待完成。
+v0.1.0 发布证据已完成：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可运行 Banking Demo、五任务 Eval、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。真实模型五任务基线、无 reference overlay 的公开演示、全新环境 smoke、真实 Docker 测试及远端工作流结果见[发布清单](docs/RELEASE_CHECKLIST_V0.1.md)。
 
 ## 本地开发
 
