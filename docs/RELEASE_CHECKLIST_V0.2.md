@@ -18,9 +18,9 @@
 - [x] Five-task real-model regression is recorded against the commit containing Issues 21–32
 - [x] Model, Prompt/strategy, price and environment are recorded
 - [ ] CI, Security and Eval smoke pass on the exact release commit
-- [ ] No credentials, reference overlay, local absolute paths or unreviewed generated artifacts are committed
+- [x] No credentials, reference overlay, local absolute paths or unreviewed generated artifacts are committed
 
-Local candidate verification ran on 2026-08-29 with OpenJDK 21.0.12.1, Maven Wrapper and Docker Engine 28.4.0 on macOS arm64. The full 24-module reactor completed in 4m24s; the Docker integration class completed in 179.8s.
+Local candidate verification ran on 2026-08-29 with OpenJDK 21.0.12.1, Maven Wrapper and Docker Engine 28.4.0 on macOS arm64. After correcting the MCP-reported release version, the final full 24-module reactor completed in 5m14s; 127 tests passed and the Docker integration class completed 2/2 in 237.6s with no skips.
 
 ## Publication
 

@@ -14,9 +14,16 @@
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-observability</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-agent-runtime</artifactId><version>${project.version}</version></dependency>
   </dependencies>
-  <build><plugins><plugin>
-    <groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId>
-    <configuration><mainClass>io.legacypilot.mcp.LegacyPilotMcpMain</mainClass></configuration>
-    <executions><execution><goals><goal>repackage</goal></goals></execution></executions>
-  </plugin></plugins></build>
+  <build><plugins>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId>
+      <version>3.5.0</version>
+      <configuration><archive><manifestEntries><Implementation-Version>${project.version}</Implementation-Version></manifestEntries></archive></configuration>
+    </plugin>
+    <plugin>
+      <groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId>
+      <configuration><mainClass>io.legacypilot.mcp.LegacyPilotMcpMain</mainClass></configuration>
+      <executions><execution><goals><goal>repackage</goal></goals></execution></executions>
+    </plugin>
+  </plugins></build>
 </project>

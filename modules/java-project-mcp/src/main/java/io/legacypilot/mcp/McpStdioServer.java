@@ -14,13 +14,24 @@ public final class McpStdioServer {
   private final PrintWriter output;
   private final McpToolBridge tools;
   private final ObjectMapper mapper;
+  private final String serverVersion;
 
   public McpStdioServer(
       BufferedReader input, PrintWriter output, McpToolBridge tools, ObjectMapper mapper) {
+    this(input, output, tools, mapper, runtimeVersion());
+  }
+
+  McpStdioServer(
+      BufferedReader input,
+      PrintWriter output,
+      McpToolBridge tools,
+      ObjectMapper mapper,
+      String serverVersion) {
     this.input = Objects.requireNonNull(input);
     this.output = Objects.requireNonNull(output);
     this.tools = Objects.requireNonNull(tools);
     this.mapper = Objects.requireNonNull(mapper);
+    this.serverVersion = Objects.requireNonNull(serverVersion);
   }
 
   public void serve() throws IOException {
@@ -68,8 +79,18 @@ public final class McpStdioServer {
     var result = mapper.createObjectNode();
     result.put("protocolVersion", PROTOCOL_VERSION);
     result.putObject("capabilities").putObject("tools").put("listChanged", false);
-    result.putObject("serverInfo").put("name", "legacy-pilot-java-project").put("version", "0.1.0");
+    result
+        .putObject("serverInfo")
+        .put("name", "legacy-pilot-java-project")
+        .put("version", serverVersion);
     return result;
+  }
+
+  private static String runtimeVersion() {
+    var implementationVersion = McpStdioServer.class.getPackage().getImplementationVersion();
+    return implementationVersion == null || implementationVersion.isBlank()
+        ? "development"
+        : implementationVersion;
   }
 
   private JsonNode error(JsonNode id, int code, String message) {

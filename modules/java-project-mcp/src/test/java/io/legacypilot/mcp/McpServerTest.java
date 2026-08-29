@@ -144,6 +144,7 @@ class McpServerTest {
     assertEquals(
         McpStdioServer.PROTOCOL_VERSION,
         responses.getFirst().at("/result/protocolVersion").asText());
+    assertEquals("development", responses.getFirst().at("/result/serverInfo/version").asText());
     assertEquals(6, responses.get(1).at("/result/tools").size());
     assertEquals(-32700, responses.get(3).at("/error/code").asInt());
     assertEquals(-32601, responses.get(4).at("/error/code").asInt());
