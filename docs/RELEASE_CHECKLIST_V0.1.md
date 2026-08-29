@@ -23,5 +23,6 @@
 - [x] 确认远端工作流通过（`5dedd285`：[CI](https://github.com/tanglijiong/LegacyPilot/actions/runs/33235703354)、[Security](https://github.com/tanglijiong/LegacyPilot/actions/runs/33235703378)、[Eval smoke](https://github.com/tanglijiong/LegacyPilot/actions/runs/33235703386)）
 - [x] 录制不使用 reference overlay 的公开演示（[GIF](assets/demo/legacy-pilot-task-005-real-model.gif) / [MP4](assets/demo/legacy-pilot-task-005-real-model.mp4) / [证据说明](PUBLIC_DEMO.md)）
 - [x] 在发布 commit 上创建并推送 `v0.1.0` tag
+- [x] 发布 [`v0.1.0` GitHub Release](https://github.com/tanglijiong/LegacyPilot/releases/tag/v0.1.0)
 
-v0.1.0 的源码、真实模型基线、全新环境 smoke、真实 Docker 测试、公开演示和远端工作流证据均已完成。
+v0.1.0 的源码、真实模型基线、全新环境 smoke、真实 Docker 测试、公开演示、远端工作流证据和公开 Release 均已完成。
