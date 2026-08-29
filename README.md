@@ -86,6 +86,7 @@ Token / Cost / Duration: recorded
 - [Issue 17–20 工程验收与发布待办](docs/NEXT_TASK_ISSUES_17_20.md)
 - [已完成长期任务：Issues 21–26 可恢复 Harness](docs/NEXT_TASK_ISSUES_21_26.md)
 - [已完成长期任务：Issues 27–32 受治理工具链与模型韧性](docs/NEXT_TASK_ISSUES_27_32.md)
+- [下一阶段长期任务：v0.2 收口与证据优先的精简 v0.3](docs/NEXT_LONG_RUNNING_TASK_V0_2_V0_3.md)
 - [可恢复 Harness 运维指南](docs/RESILIENT_HARNESS.md)
 - [受治理 Harness 指南](docs/GOVERNED_HARNESS.md)
 - [30 分钟 Quickstart](docs/QUICKSTART.md)

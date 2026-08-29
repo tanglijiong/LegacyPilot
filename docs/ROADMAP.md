@@ -43,7 +43,7 @@
 
 ## v0.2 — Strong Harness
 
-**当前进度：** 第一阶段 Issues 21–26 与第二阶段 Issues 27–32 的本地工程实现均已完成；真实 provider、Docker 和发布证据仍按 release checklist 单独验收。详见 [`NEXT_TASK_ISSUES_27_32.md`](NEXT_TASK_ISSUES_27_32.md)。
+**当前进度：** 第一阶段 Issues 21–26 与第二阶段 Issues 27–32 的本地工程实现均已完成。下一步先补齐迁移、真实模型回归、Docker/Quickstart 和发布清单，正式发布 `v0.2.0`。详见 [`NEXT_LONG_RUNNING_TASK_V0_2_V0_3.md`](NEXT_LONG_RUNNING_TASK_V0_2_V0_3.md)。
 
 ### 目标
 
@@ -68,6 +68,8 @@
 - 安全测试覆盖审批绕过、路径逃逸、命令注入和敏感信息泄露。
 
 ## v0.3 — AgentOps
+
+**当前聚焦：** 不建设完整 AgentOps 平台，只交付 20 个核心任务（30 个为 stretch）、模型/Prompt/策略成对比较、成功率/成本/耗时/失败分类，以及自包含静态 Eval Dashboard。
 
 ### 目标
 
