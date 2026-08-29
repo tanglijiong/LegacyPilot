@@ -11,7 +11,7 @@
   </properties>
   <dependencies>
     <dependency><groupId>org.springframework</groupId><artifactId>spring-context</artifactId><version>6.2.19</version></dependency>
-    <dependency><groupId>org.springframework</groupId><artifactId>spring-web</artifactId><version>6.2.19</version></dependency>
+    <dependency><groupId>org.springframework</groupId><artifactId>spring-web</artifactId><version>7.0.9</version></dependency>
     <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.14.4</version><scope>test</scope></dependency>
   </dependencies>
   <build><plugins>
