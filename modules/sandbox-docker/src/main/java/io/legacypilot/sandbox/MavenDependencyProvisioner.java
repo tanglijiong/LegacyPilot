@@ -31,7 +31,9 @@ public final class MavenDependencyProvisioner {
                     "mvn",
                     "--batch-mode",
                     "-Dmaven.repo.local=/maven-cache",
-                    "dependency:go-offline"),
+                    "-Dgroups=__LegacyPilotDependencyPrewarm__",
+                    "dependency:go-offline",
+                    "test"),
                 Map.of(),
                 limits,
                 SandboxPhase.DEPENDENCY_PREWARM));

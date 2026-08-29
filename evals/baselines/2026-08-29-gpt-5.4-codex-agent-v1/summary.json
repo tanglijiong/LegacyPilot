@@ -1,0 +1,129 @@
+{
+  "datasetVersion": "v0.1",
+  "fixtureRevision": "banking-fixture-v2",
+  "fixtureSha256": "5d01504b7e0c165e2351f24b39b8f81f927bbf0cbe1b6221823038c3aef69704",
+  "repositoryCommit": "7617a02f7e7e99351897e2e899ce18d9a203ec2b",
+  "model": {
+    "provider": "OpenAI Codex with ChatGPT account authentication",
+    "requestedAlias": "gpt-5.4",
+    "officialCurrentSnapshot": "gpt-5.4-2026-03-05",
+    "snapshotAcceptedByCredentialChannel": false,
+    "reasoningEffort": "high"
+  },
+  "promptVersion": "baseline-prompt-v1",
+  "promptSha256": "2913d760a67f00d38dcdcabb8934c8422928e4d70e35030dde570db1606e056a",
+  "strategyVersion": "codex-agent-v1",
+  "startedAt": "2026-08-29T10:18:27+06:00",
+  "completedAt": "2026-08-29T10:33:03+06:00",
+  "firstAttemptSuccesses": 1,
+  "finalSuccesses": 5,
+  "taskCount": 5,
+  "successTarget": 4,
+  "targetMet": true,
+  "pricing": {
+    "currency": "USD",
+    "unit": "per 1M tokens",
+    "input": 2.50,
+    "cachedInput": 0.25,
+    "output": 15.00,
+    "source": "https://developers.openai.com/api/docs/models/gpt-5.4",
+    "billingNote": "API-equivalent estimate only; ChatGPT-account Codex authentication produced no per-request API invoice."
+  },
+  "usage": {
+    "inputTokens": 1671129,
+    "cachedInputTokens": 1492992,
+    "uncachedInputTokens": 178137,
+    "outputTokens": 30524,
+    "reasoningOutputTokens": 8680,
+    "apiEquivalentUsd": 1.2764505
+  },
+  "environment": {
+    "os": "macOS 15.5",
+    "architecture": "arm64",
+    "executionJava": "OpenJDK 21.0.12.1",
+    "hostDefaultJava": "OpenJDK 17.0.15",
+    "maven": "Apache Maven 3.9.16 via project wrapper",
+    "codexCli": "0.144.1",
+    "sandbox": "workspace-write",
+    "taskConcurrency": "2",
+    "docker": "Docker Desktop 28.4.0 running; not used by this baseline"
+  },
+  "tasks": [
+    {
+      "id": "task-001",
+      "attempts": 1,
+      "firstAttemptPassed": true,
+      "finalStatus": "PASSED",
+      "assertionsPassed": "3/3",
+      "mavenTestsPassed": true,
+      "inputTokens": 155182,
+      "cachedInputTokens": 135680,
+      "outputTokens": 2588,
+      "reasoningOutputTokens": 406,
+      "apiEquivalentUsd": 0.121495
+    },
+    {
+      "id": "task-002",
+      "attempts": 2,
+      "firstAttemptPassed": false,
+      "finalStatus": "PASSED",
+      "assertionsPassed": "2/2",
+      "mavenTestsPassed": true,
+      "inputTokens": 271969,
+      "cachedInputTokens": 235776,
+      "outputTokens": 4601,
+      "reasoningOutputTokens": 806,
+      "apiEquivalentUsd": 0.2184415
+    },
+    {
+      "id": "task-003",
+      "attempts": 2,
+      "firstAttemptPassed": false,
+      "finalStatus": "PASSED",
+      "assertionsPassed": "2/2",
+      "mavenTestsPassed": true,
+      "inputTokens": 271147,
+      "cachedInputTokens": 242432,
+      "outputTokens": 4188,
+      "reasoningOutputTokens": 919,
+      "apiEquivalentUsd": 0.1952155
+    },
+    {
+      "id": "task-004",
+      "attempts": 2,
+      "firstAttemptPassed": false,
+      "finalStatus": "PASSED",
+      "assertionsPassed": "3/3",
+      "mavenTestsPassed": true,
+      "inputTokens": 410017,
+      "cachedInputTokens": 370432,
+      "outputTokens": 7787,
+      "reasoningOutputTokens": 2884,
+      "apiEquivalentUsd": 0.3083755
+    },
+    {
+      "id": "task-005",
+      "attempts": 2,
+      "firstAttemptPassed": false,
+      "finalStatus": "PASSED",
+      "assertionsPassed": "5/5",
+      "mavenTestsPassed": true,
+      "inputTokens": 562814,
+      "cachedInputTokens": 508672,
+      "outputTokens": 11360,
+      "reasoningOutputTokens": 3665,
+      "apiEquivalentUsd": 0.432923
+    }
+  ],
+  "integrity": {
+    "pomFilesUnchanged": true,
+    "testSourcesUnchanged": true,
+    "referenceSolutionsProvidedToModel": false,
+    "rawCredentialsRecorded": false
+  },
+  "notes": [
+    "The fixed API snapshot name was rejected by the ChatGPT-account Codex channel, so the accepted gpt-5.4 alias was used.",
+    "Intermittent TLS, WebSocket, plugin-catalog, and analytics transport warnings occurred; built-in provider retries recovered.",
+    "Reasoning output tokens are reported as the subset exposed by Codex turn usage and are not added again to output-token pricing."
+  ]
+}

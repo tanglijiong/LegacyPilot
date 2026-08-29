@@ -13,15 +13,15 @@
 - [x] Quickstart、MCP、Eval、配置样例和已知限制
 - [x] 审阅本地工作树并创建源码提交 `2c7cc73`
 
-本次验收共执行 87 个测试：0 failures、0 errors、1 skipped。跳过项是本机 Docker daemon 不可用时的既有 Docker 集成测试；Docker 不影响本地 Maven fixture 验证。
+最新全新环境验收共执行 127 个测试：0 failures、0 errors、0 skipped；其中两个真实 Docker 集成测试均已执行并通过。
 
 ## 发布前仍需人工完成
 
-- [ ] 在具有 provider credentials 的隔离环境运行真实模型五任务基线，并提交模型、价格表和环境信息
-- [ ] 在全新环境按 Quickstart 完成 30 分钟 smoke task
-- [ ] 在可用 Docker daemon 上通过 Docker 集成测试
+- [x] 在具有 provider credentials 的隔离环境运行真实模型五任务基线，并提交模型、价格表和环境信息（GPT-5.4：首次 1/5，单次公开断言反馈重试后 5/5）
+- [x] 在全新环境按 Quickstart 完成 30 分钟 smoke task（16 分 12 秒；[证据](QUICKSTART_SMOKE_2026-08-29.md)）
+- [x] 在可用 Docker daemon 上通过 Docker 集成测试（2/2；[证据](QUICKSTART_SMOKE_2026-08-29.md)）
 - [ ] 确认远端 CI、Security 和 Eval smoke 工作流通过
-- [ ] 录制不使用 reference overlay 的公开演示 GIF/视频
+- [x] 录制不使用 reference overlay 的公开演示（[GIF](assets/demo/legacy-pilot-task-005-real-model.gif) / [MP4](assets/demo/legacy-pilot-task-005-real-model.mp4) / [证据说明](PUBLIC_DEMO.md)）
 - [ ] 在发布 commit 上创建并推送 `v0.1.0` tag
 
-完整 v0.1 源码已形成可审阅提交；发布 tag 仍应等待真实模型、全新环境、Docker、远端 CI 和演示证据完成。
+发布 tag 仍应等待本次变更与 smoke/演示证据提交并推送，以及远端 CI、Security、Eval smoke 工作流通过。

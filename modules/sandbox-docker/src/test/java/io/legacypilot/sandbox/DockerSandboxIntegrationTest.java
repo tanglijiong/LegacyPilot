@@ -55,7 +55,7 @@ class DockerSandboxIntegrationTest {
     var provisioned =
         new MavenDependencyProvisioner(sandbox, caches, DockerSandbox.DEFAULT_MAVEN_IMAGE)
             .prewarm(fixture, SandboxLimits.safeDefaults());
-    assertTrue(provisioned.result().successful());
+    assertTrue(provisioned.result().successful(), provisioned.result().output());
     var offline =
         sandbox.execute(
             new SandboxRequest(

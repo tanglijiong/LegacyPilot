@@ -38,6 +38,12 @@ Risk: LOW
 Token / Cost / Duration: recorded
 ```
 
+## 公开演示
+
+![LegacyPilot 真实模型公开演示](docs/assets/demo/legacy-pilot-task-005-real-model.gif)
+
+这段 41 秒演示回放真实 GPT-5.4 运行 `task-005` 的证据：模型未获得 reference solution，也未使用 reference overlay；它在隔离工作区修改生产代码，5 项公开断言全部通过，独立 Maven 测试通过。另见 [MP4](docs/assets/demo/legacy-pilot-task-005-real-model.mp4) 和[证据说明](docs/PUBLIC_DEMO.md)。
+
 ## 核心能力
 
 - 自研 Agent Runtime：Plan → Act → Observe → Verify → Retry
@@ -85,10 +91,11 @@ Token / Cost / Duration: recorded
 - [30 分钟 Quickstart](docs/QUICKSTART.md)
 - [MCP Server](docs/MCP_SERVER.md)
 - [Eval Harness 与公开基线](docs/EVALS.md)
+- [公开演示证据](docs/PUBLIC_DEMO.md)
 
 ## 当前状态
 
-Issues 01–19、21–32 及 Issue 20 的工程/文档部分已完成：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可运行 Banking Demo、五任务 Eval、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。真实模型五任务分数、公开演示视频和发布 tag 仍按[发布清单](docs/RELEASE_CHECKLIST_V0.1.md)等待人工发布条件。
+Issues 01–19、21–32 及 Issue 20 的工程/文档部分已完成：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可运行 Banking Demo、五任务 Eval、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。真实模型五任务基线和无 reference overlay 的公开演示已经记录；远端工作流确认与发布 tag 仍按[发布清单](docs/RELEASE_CHECKLIST_V0.1.md)等待完成。
 
 ## 本地开发
 

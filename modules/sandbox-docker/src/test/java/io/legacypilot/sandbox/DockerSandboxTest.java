@@ -50,8 +50,9 @@ class DockerSandboxTest {
                 "no-new-privileges",
                 "--memory-swap",
                 "--user",
-                "1000:1000")));
-    assertTrue(command.stream().anyMatch(value -> value.contains("dst=/workspace,rw")));
+                "1000:1000",
+                "MAVEN_CONFIG=/tmp/home/.m2")));
+    assertTrue(command.stream().anyMatch(value -> value.endsWith("dst=/workspace")));
     assertTrue(command.stream().anyMatch(value -> value.contains("dst=/maven-cache,readonly")));
     assertThrows(
         IllegalArgumentException.class,
@@ -242,7 +243,7 @@ class DockerSandboxTest {
                 limits(Duration.ofSeconds(1), 4096, 10_000_000),
                 SandboxPhase.DEPENDENCY_PREWARM));
     assertEquals("bridge", prewarm.get(prewarm.indexOf("--network") + 1));
-    assertTrue(prewarm.stream().anyMatch(value -> value.endsWith("dst=/maven-cache,rw")));
+    assertTrue(prewarm.stream().anyMatch(value -> value.endsWith("dst=/maven-cache")));
 
     var offline =
         factory.create(
@@ -338,6 +339,8 @@ class DockerSandboxTest {
     assertEquals(provisioned.path(), captured.get().dependencyCache());
     assertEquals(SandboxPhase.DEPENDENCY_PREWARM, captured.get().phase());
     assertTrue(captured.get().command().contains("dependency:go-offline"));
+    assertTrue(captured.get().command().contains("test"));
+    assertTrue(captured.get().command().contains("-Dgroups=__LegacyPilotDependencyPrewarm__"));
   }
 
   private DockerSandbox sandbox(Path executable) {

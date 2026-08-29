@@ -22,6 +22,7 @@
 | [Quickstart](QUICKSTART.md) | 在新环境构建、运行 Eval、启动 MCP 和排查常见故障 |
 | [MCP Server](MCP_SERVER.md) | STDIO 配置、工具清单和安全边界 |
 | [Eval Harness](EVALS.md) | 五任务数据集、指标和基线解释 |
+| [公开演示证据](PUBLIC_DEMO.md) | 无 reference overlay 的真实模型演示、完整性检查与媒体文件 |
 
 ## 版本定义
 

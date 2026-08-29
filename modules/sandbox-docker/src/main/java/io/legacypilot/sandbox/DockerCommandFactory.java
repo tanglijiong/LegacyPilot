@@ -58,15 +58,20 @@ final class DockerCommandFactory {
     if (!allowedEnvironment.containsAll(request.environment().keySet())) {
       throw new IllegalArgumentException("sandbox environment key is not allowlisted");
     }
-    if (!Files.isDirectory(request.workspace())) {
+    var workspace = request.workspace().toAbsolutePath().normalize();
+    if (!Files.isDirectory(workspace)) {
       throw new IllegalArgumentException("workspace must be an existing directory");
     }
-    validateMountPath(request.workspace().toString());
-    if (request.dependencyCache() != null) {
-      if (!Files.isDirectory(request.dependencyCache())) {
+    validateMountPath(workspace.toString());
+    var dependencyCache =
+        request.dependencyCache() == null
+            ? null
+            : request.dependencyCache().toAbsolutePath().normalize();
+    if (dependencyCache != null) {
+      if (!Files.isDirectory(dependencyCache)) {
         throw new IllegalArgumentException("dependency cache must be an existing directory");
       }
-      validateMountPath(request.dependencyCache().toString());
+      validateMountPath(dependencyCache.toString());
     }
     if (request.phase() == SandboxPhase.DEPENDENCY_PREWARM && !networkedPrewarmAllowed) {
       throw new IllegalArgumentException("networked dependency prewarm is disabled");
@@ -103,17 +108,19 @@ final class DockerCommandFactory {
             "--tmpfs",
             "/tmp:rw,noexec,nosuid,nodev,size=" + limits.temporaryStorageBytes(),
             "--mount",
-            "type=bind,src=" + request.workspace() + ",dst=/workspace,rw",
+            "type=bind,src=" + workspace + ",dst=/workspace",
             "--env",
-            "HOME=/tmp/home"));
-    if (request.dependencyCache() != null) {
+            "HOME=/tmp/home",
+            "--env",
+            "MAVEN_CONFIG=/tmp/home/.m2"));
+    if (dependencyCache != null) {
       command.addAll(
           List.of(
               "--mount",
               "type=bind,src="
-                  + request.dependencyCache()
-                  + ",dst=/maven-cache,"
-                  + (request.phase() == SandboxPhase.DEPENDENCY_PREWARM ? "rw" : "readonly")));
+                  + dependencyCache
+                  + ",dst=/maven-cache"
+                  + (request.phase() == SandboxPhase.DEPENDENCY_PREWARM ? "" : ",readonly")));
     }
     request.environment().entrySet().stream()
         .sorted(java.util.Map.Entry.comparingByKey())

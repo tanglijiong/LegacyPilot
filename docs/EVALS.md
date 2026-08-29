@@ -27,4 +27,4 @@ java -jar apps/cli/target/legacy-pilot-cli-0.1.0-SNAPSHOT.jar eval-run
 
 - `reference-ceiling` 使用不可见于 fixture 索引的参考覆盖层，验证 dataset 与断言本身可达到 5/5；它不是模型成绩。
 - `fake-replay` 端到端测试从 baseline 重新建立索引，经过 Planner、审批、4 次受控 patch、Verification Pipeline 和真实 Maven 测试完成 task-005。
-- 尚未提交真实外部模型的五任务分数，因为当前环境没有提供模型凭据。发布报告不会把 reference ceiling 冒充模型成功率。
+- 真实模型基线已使用 OpenAI Codex 的现有 ChatGPT 账户凭据运行：GPT-5.4 首次 1/5，在每任务最多一次公开断言反馈重试后达到 5/5。模型、Prompt/策略版本、价格口径、Token 和环境证据见 [`evals/baselines/2026-08-29-gpt-5.4-codex-agent-v1`](../evals/baselines/2026-08-29-gpt-5.4-codex-agent-v1/README.md)。报告明确区分 reference ceiling、首次模型成绩和带重试策略的最终成绩。
