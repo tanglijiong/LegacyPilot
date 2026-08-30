@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -34,17 +35,17 @@ class EvalHarnessTest {
   }
 
   @Test
-  void loadsTheGovernedV03DraftWithVerifiedFixtureProvenance() {
+  void loadsTheFrozenV03CoreWithVerifiedProvenanceAndDistribution() {
     var dataset =
         new EvalDatasetLoader().loadVersioned(repositoryRoot().resolve("evals/datasets/v0.3"));
 
     assertEquals("eval-dataset-v2", dataset.schemaVersion());
-    assertEquals("v0.3-draft.2", dataset.datasetVersion());
-    assertEquals(15, dataset.tasks().size());
+    assertEquals("v0.3-core.1", dataset.datasetVersion());
+    assertEquals(20, dataset.tasks().size());
     assertEquals("banking-fixture-v2", dataset.tasks().getFirst().fixtureId());
-    assertEquals("task-015", dataset.tasks().getLast().id());
-    assertEquals("medium", dataset.tasks().getLast().difficulty());
-    assertEquals(28_000, dataset.tasks().getLast().resourceBudget().maximumTokens());
+    assertEquals("task-020", dataset.tasks().getLast().id());
+    assertEquals("hard", dataset.tasks().getLast().difficulty());
+    assertEquals(32_000, dataset.tasks().getLast().resourceBudget().maximumTokens());
     assertFalse(dataset.tasks().get(1).assertions().getFirst().value().isBlank());
     assertTrue(
         dataset.fixtures().get("banking-fixture-v2").path().endsWith("samples/banking-demo"));
@@ -62,6 +63,29 @@ class EvalHarnessTest {
             .endsWith("samples/job-scheduler-fixture"));
     assertEquals(3, dataset.tasks().stream().map(EvalTask::fixtureId).distinct().count());
     assertTrue(dataset.tasks().stream().map(EvalTask::category).distinct().count() >= 10);
+    assertTrue(
+        dataset.tasks().stream().filter(task -> task.expectedImpact().equals("multi-file")).count()
+            >= 6);
+    var timeAndBoundaryCategories =
+        Set.of(
+            "data-boundary",
+            "concurrency-time",
+            "time-semantics",
+            "concurrency",
+            "retry-policy",
+            "persistence-query");
+    assertTrue(
+        dataset.tasks().stream()
+                .filter(task -> timeAndBoundaryCategories.contains(task.category()))
+                .count()
+            >= 4);
+    var negativeAndSecurityCategories =
+        Set.of("validation", "security", "input-parsing", "domain-state", "retry-policy");
+    assertTrue(
+        dataset.tasks().stream()
+                .filter(task -> negativeAndSecurityCategories.contains(task.category()))
+                .count()
+            >= 4);
   }
 
   @Test

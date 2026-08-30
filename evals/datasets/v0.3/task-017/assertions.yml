@@ -1,0 +1,12 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobRepository.java
+  value: findReadyScheduledBefore
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  value: limit < 1
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  value: limit > 100
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  value: repository.findReadyScheduledBefore(dueExclusive, limit)

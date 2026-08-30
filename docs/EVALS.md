@@ -9,9 +9,9 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 
 默认加载经过 manifest 和 fixture digest 验证的 `evals/datasets/v0.3` draft。也可通过 `--dataset`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数；`--fixture` 仅用于兼容没有 manifest 的 v0.1 数据集。v2 契约详见 [Eval Dataset v2 与 Fixture 治理](EVAL_DATASET_V2.md)。
 
-## Dataset v0.3 draft
+## Dataset v0.3 core
 
-`v0.3-draft.2` 已扩展到 15 个任务和 3 个固定 fixture。新增订单服务与任务调度器场景，覆盖幂等、输入验证、异常映射、查询边界、敏感信息、重试、UTC、并发、解析和稳定分页。它仍不是最终 v0.3 基线；task-016–020 完成后才会冻结 20-task manifest。
+`v0.3-core.1` 已冻结 20 个任务和 3 个固定 fixture。数据集覆盖领域状态、幂等、输入验证、API 异常、查询与 schema、敏感信息、重试、UTC、并发、解析、稳定分页、余额规则与 HMAC 验签。该 manifest 不再原地修改；后续任务或修订必须发布新的 datasetVersion 和 SHA-256。task-021–030 是可选 stretch，不是 v0.3 发布门槛。
 
 ## Dataset v0.1
 

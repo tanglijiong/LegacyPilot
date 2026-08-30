@@ -1,0 +1,26 @@
+id: task-018
+category: domain-rule
+difficulty: hard
+changeType: feature
+expectedImpact: multi-file
+requirement: Add balance-backed transfers that validate the amount, reject insufficient funds before writes, persist the debited account, and then record the transfer.
+fixtureId: banking-fixture-v2
+allowedFiles:
+  - src/main/java/io/legacypilot/samples/banking/Account.java
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/samples/banking/TransferServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/samples/banking/Account.java
+  - src/main/java/io/legacypilot/samples/banking/TransferService.java
+relevantSymbols:
+  - io.legacypilot.samples.banking.Account
+  - io.legacypilot.samples.banking.AccountRepository
+  - io.legacypilot.samples.banking.TransferService
+maximumSteps: 14
+timeoutSeconds: 180
+resourceBudget:
+  maximumTokens: 40000
+  maximumMemoryMb: 2048
+  maximumCostCents: 450

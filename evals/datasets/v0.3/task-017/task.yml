@@ -1,0 +1,25 @@
+id: task-017
+category: persistence-query
+difficulty: medium
+changeType: feature
+expectedImpact: multi-file
+requirement: Add a repository-backed query for READY jobs scheduled before an exclusive instant, enforcing a batch limit from 1 through 100 before querying.
+fixtureId: job-scheduler-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  - src/main/java/io/legacypilot/fixtures/jobs/JobRepository.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/jobs/JobSchedulerTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  - src/main/java/io/legacypilot/fixtures/jobs/JobRepository.java
+relevantSymbols:
+  - io.legacypilot.fixtures.jobs.JobQueryService
+  - io.legacypilot.fixtures.jobs.JobRepository
+maximumSteps: 12
+timeoutSeconds: 150
+resourceBudget:
+  maximumTokens: 32000
+  maximumMemoryMb: 2048
+  maximumCostCents: 350

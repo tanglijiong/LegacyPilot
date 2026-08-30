@@ -58,7 +58,7 @@ LegacyPilot 的核心价值是可治理、可恢复、可评测的 Java Agent Ha
 
 ### Issue 34 — Eval v0.2 Schema、fixture registry 与数据治理
 
-**实施状态（2026-08-29）：** 已完成。`v0.3-draft.1` 已迁移原五任务；manifest/task/fixture digest、provenance、稳定任务顺序、允许/禁止文件、资源预算、symlink 与越界路径 fail-closed 检查均已落地。五任务 reference ceiling 为 5/5，篡改与文件范围测试通过。正式 20-task manifest 仍须等 Issue 35/36 后冻结。
+**实施状态（2026-08-29）：** 已完成。manifest/task/fixture digest、provenance、稳定任务顺序、允许/禁止文件、资源预算、symlink 与越界路径 fail-closed 检查均已落地；治理机制现用于已冻结的 `v0.3-core.1` 20-task manifest。
 
 #### 工作内容
 
@@ -92,6 +92,8 @@ LegacyPilot 的核心价值是可治理、可恢复、可评测的 Java Agent Ha
 任务需求应来自真实 issue/PR 模式或公开项目维护场景，不为当前 Agent 的实现路径量身定制。每个任务先由人工/reference 验证唯一可判定的行为结果，再进入模型实验。
 
 ### Issue 36 — 核心任务包 B（task-016–020）与 stretch gate
+
+**实施状态（2026-08-30）：** 已完成。新增订单取消状态机、到期任务持久化查询、余额扣减转账、历史查询复合索引和 Webhook HMAC 验签；`v0.3-core.1` 已冻结，分布门槛、逐题初始失败、范围完整性和 20/20 reference ceiling 均通过。task-021–030 保持 stretch 状态，不进入当前发布门槛。
 
 再增加 5 个任务，使包含原始 task-001–005 的核心数据集达到 20 个，并补足首批数据中不足的类别。
 

@@ -1,0 +1,8 @@
+- type: FILE_EXISTS
+  path: src/main/resources/db/migration/V2__transfer_history_index.sql
+- type: MATCHES_REGEX
+  path: src/main/resources/db/migration/V2__transfer_history_index.sql
+  value: (?i)CREATE\s+INDEX[\s\S]*ON\s+transfer\s*\(\s*account_id\s*,\s*occurred_at\s*\)
+- type: NOT_CONTAINS
+  path: src/main/resources/db/migration/V2__transfer_history_index.sql
+  value: DROP

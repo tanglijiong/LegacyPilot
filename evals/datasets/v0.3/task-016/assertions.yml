@@ -1,0 +1,12 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/Order.java
+  value: ORDER_ALREADY_COMPLETED
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/Order.java
+  value: OrderStatus.CANCELLED
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: "public Order cancel(String id)"
+- type: MATCHES_REGEX
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: if\s*\(cancelled\s*!=\s*current\)[\s\S]*repository\.save\(cancelled\)

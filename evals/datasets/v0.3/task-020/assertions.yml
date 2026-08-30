@@ -1,0 +1,11 @@
+- type: FILE_EXISTS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+  value: HmacSHA256
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+  value: MessageDigest.isEqual
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+  value: parseHex

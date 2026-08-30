@@ -1,0 +1,23 @@
+id: task-019
+category: persistence-schema
+difficulty: easy
+changeType: performance
+expectedImpact: single-file
+requirement: Add an additive database migration with a composite index on transfer account_id followed by occurred_at for history lookups.
+fixtureId: banking-fixture-v2
+allowedFiles:
+  - src/main/resources/db/migration/V2__transfer_history_index.sql
+forbiddenFiles:
+  - pom.xml
+  - src/main/resources/db/migration/V1__banking_baseline.sql
+  - src/test/java/io/legacypilot/samples/banking/TransferServiceTest.java
+expectedFiles:
+  - src/main/resources/db/migration/V2__transfer_history_index.sql
+relevantSymbols:
+  - io.legacypilot.samples.banking.TransferRepository
+maximumSteps: 6
+timeoutSeconds: 90
+resourceBudget:
+  maximumTokens: 16000
+  maximumMemoryMb: 2048
+  maximumCostCents: 200

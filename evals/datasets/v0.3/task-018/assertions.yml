@@ -1,0 +1,12 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/Account.java
+  value: INSUFFICIENT_FUNDS
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/Account.java
+  value: balance.subtract(amount)
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: transferFromBalance
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/samples/banking/TransferService.java
+  value: accounts.save(debited)

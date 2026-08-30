@@ -1,0 +1,22 @@
+id: task-020
+category: security
+difficulty: hard
+changeType: hardening
+expectedImpact: single-file
+requirement: Add HMAC-SHA256 webhook verification for order payloads using hexadecimal signatures, constant-time comparison, and safe rejection of malformed input.
+fixtureId: order-service-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/orders/OrderServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+relevantSymbols:
+  - io.legacypilot.fixtures.orders.OrderController
+maximumSteps: 12
+timeoutSeconds: 150
+resourceBudget:
+  maximumTokens: 32000
+  maximumMemoryMb: 2048
+  maximumCostCents: 350
