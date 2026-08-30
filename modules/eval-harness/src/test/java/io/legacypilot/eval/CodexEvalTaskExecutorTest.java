@@ -25,6 +25,7 @@ class CodexEvalTaskExecutorTest {
         executable,
         """
         #!/bin/sh
+        cat >/dev/null
         while [ "$#" -gt 0 ]; do
           if [ "$1" = "--cd" ]; then shift; workspace="$1"; fi
           shift

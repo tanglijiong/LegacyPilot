@@ -246,6 +246,7 @@ class CliCommandsTest {
         """
         #!/bin/sh
         if [ "$1" = "--version" ]; then echo 'codex-cli test'; exit 0; fi
+        cat >/dev/null
         echo call >> '%s'
         printf '%%s\n' '{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":2}}'
         """
