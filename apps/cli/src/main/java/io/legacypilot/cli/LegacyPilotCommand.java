@@ -22,7 +22,8 @@ import picocli.CommandLine.Command;
       AgentStateCheckCommand.class,
       CapabilityIssueCommand.class,
       CapabilityRevokeCommand.class,
-      EvalRunCommand.class
+      EvalRunCommand.class,
+      EvalModelRunCommand.class
     })
 public class LegacyPilotCommand implements Runnable {
 

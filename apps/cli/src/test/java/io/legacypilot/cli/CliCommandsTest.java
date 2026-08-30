@@ -42,6 +42,7 @@ import io.legacypilot.runtime.RuntimeStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
@@ -236,6 +237,151 @@ class CliCommandsTest {
   }
 
   @Test
+  void startsAndResumesADurableProviderBackedEvalWithoutRepeatingCalls() throws Exception {
+    var root = Path.of("../..").toAbsolutePath().normalize();
+    var calls = temporary.resolve("codex-calls.txt");
+    var codex = temporary.resolve("fake-codex");
+    Files.writeString(
+        codex,
+        """
+        #!/bin/sh
+        if [ "$1" = "--version" ]; then echo 'codex-cli test'; exit 0; fi
+        echo call >> '%s'
+        printf '%%s\n' '{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":2}}'
+        """
+            .formatted(calls));
+    assertTrue(codex.toFile().setExecutable(true));
+    var maven = temporary.resolve("fake-mvnw");
+    Files.writeString(maven, "#!/bin/sh\nexit 0\n");
+    assertTrue(maven.toFile().setExecutable(true));
+    var prompt = temporary.resolve("prompt.md");
+    Files.writeString(prompt, "Implement this governed requirement: {{requirement}}\n");
+    var experiment = temporary.resolve("run-model");
+    var mapper = new ObjectMapper().findAndRegisterModules();
+    var command =
+        new EvalModelRunCommand(
+            new JsonOutput(mapper),
+            mapper,
+            () -> "",
+            () -> "0123456789abcdef0123456789abcdef01234567");
+
+    var started =
+        captureResult(
+            () ->
+                new CommandLine(command)
+                    .execute(
+                        "--dataset",
+                        root.resolve("evals/datasets/v0.3").toString(),
+                        "--output",
+                        experiment.toString(),
+                        "--run-id",
+                        "test-provider-run",
+                        "--model",
+                        "fake-model",
+                        "--prompt-file",
+                        prompt.toString(),
+                        "--prompt-version",
+                        "prompt-v1",
+                        "--input-price",
+                        "1",
+                        "--cached-input-price",
+                        "0.1",
+                        "--output-price",
+                        "5",
+                        "--pricing-source",
+                        "test",
+                        "--codex-executable",
+                        codex.toString(),
+                        "--references",
+                        root.resolve("evals/reference-solutions").toString(),
+                        "--maven-wrapper",
+                        maven.toString(),
+                        "--concurrency",
+                        "2"));
+    assertEquals(0, started.exitCode());
+    assertTrue(started.text().contains("COMPLETED"));
+    assertEquals(20, Files.readAllLines(calls).size());
+
+    var resumed =
+        captureResult(
+            () ->
+                new CommandLine(
+                        new EvalModelRunCommand(
+                            new JsonOutput(mapper),
+                            mapper,
+                            () -> "dirty is ignored on resume",
+                            () -> "0123456789abcdef0123456789abcdef01234567"))
+                    .execute(
+                        "--dataset",
+                        root.resolve("evals/datasets/v0.3").toString(),
+                        "--output",
+                        experiment.toString(),
+                        "--resume",
+                        "--codex-executable",
+                        codex.toString(),
+                        "--references",
+                        root.resolve("evals/reference-solutions").toString(),
+                        "--maven-wrapper",
+                        maven.toString()));
+    assertEquals(0, resumed.exitCode());
+    assertEquals(20, Files.readAllLines(calls).size());
+  }
+
+  @Test
+  void rejectsIncompleteDirtyAndInvalidProviderEvalStarts() throws Exception {
+    var root = Path.of("../..").toAbsolutePath().normalize();
+    var mapper = new ObjectMapper().findAndRegisterModules();
+    var incomplete =
+        captureResult(
+            () ->
+                new CommandLine(new EvalModelRunCommand(new JsonOutput(mapper), mapper))
+                    .execute(
+                        "--dataset",
+                        root.resolve("evals/datasets/v0.3").toString(),
+                        "--output",
+                        temporary.resolve("incomplete").toString()));
+    assertEquals(1, incomplete.exitCode());
+
+    var validPrompt = temporary.resolve("valid-prompt.md");
+    Files.writeString(validPrompt, "Implement {{requirement}}");
+    var dirty =
+        captureResult(
+            () ->
+                new CommandLine(
+                        new EvalModelRunCommand(
+                            new JsonOutput(mapper),
+                            mapper,
+                            () -> " M source.java",
+                            () -> "0123456789abcdef0123456789abcdef01234567"))
+                    .execute(
+                        providerStartArguments(
+                            root,
+                            temporary.resolve("dirty"),
+                            validPrompt,
+                            temporary.resolve("unused"))));
+    assertEquals(1, dirty.exitCode());
+
+    var invalidPrompt = temporary.resolve("invalid-prompt.md");
+    Files.writeString(invalidPrompt, "missing placeholder");
+    var invalid =
+        captureResult(
+            () ->
+                new CommandLine(
+                        new EvalModelRunCommand(
+                            new JsonOutput(mapper),
+                            mapper,
+                            () -> "",
+                            () -> "0123456789abcdef0123456789abcdef01234567"))
+                    .execute(
+                        providerStartArguments(
+                            root,
+                            temporary.resolve("invalid"),
+                            invalidPrompt,
+                            temporary.resolve("unused"))));
+    assertEquals(1, invalid.exitCode());
+  }
+
+  @Test
   void issuesAndRevokesScopedCapabilitiesWithoutPrintingStoredTokenDigests() {
     var clock = Clock.fixed(NOW, ZoneOffset.UTC);
     var service =
@@ -313,6 +459,34 @@ class CliCommandsTest {
         NOW);
   }
 
+  private static String[] providerStartArguments(
+      Path root, Path output, Path prompt, Path executable) {
+    return new String[] {
+      "--dataset",
+      root.resolve("evals/datasets/v0.3").toString(),
+      "--output",
+      output.toString(),
+      "--run-id",
+      "invalid-run",
+      "--model",
+      "fake-model",
+      "--prompt-file",
+      prompt.toString(),
+      "--prompt-version",
+      "prompt-v1",
+      "--input-price",
+      "1",
+      "--cached-input-price",
+      "0.1",
+      "--output-price",
+      "5",
+      "--pricing-source",
+      "test",
+      "--codex-executable",
+      executable.toString()
+    };
+  }
+
   private static String capture(Runnable operation) {
     var original = System.out;
     var bytes = new ByteArrayOutputStream();
@@ -327,12 +501,15 @@ class CliCommandsTest {
 
   private static Captured captureResult(java.util.function.IntSupplier operation) {
     var original = System.out;
+    var originalError = System.err;
     var bytes = new ByteArrayOutputStream();
-    try {
-      System.setOut(new PrintStream(bytes, true, StandardCharsets.UTF_8));
+    try (var captured = new PrintStream(bytes, true, StandardCharsets.UTF_8)) {
+      System.setOut(captured);
+      System.setErr(captured);
       return new Captured(operation.getAsInt(), bytes.toString(StandardCharsets.UTF_8));
     } finally {
       System.setOut(original);
+      System.setErr(originalError);
     }
   }
 

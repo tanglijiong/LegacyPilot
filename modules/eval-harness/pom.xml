@@ -11,6 +11,7 @@
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-java-analyzer</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-context-engine</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-observability</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-durable-state</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-agent-runtime</artifactId><version>${project.version}</version><scope>test</scope></dependency>
     <dependency><groupId>io.legacypilot</groupId><artifactId>legacy-pilot-tool-filesystem</artifactId><version>${project.version}</version><scope>test</scope></dependency>
   </dependencies>

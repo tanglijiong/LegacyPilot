@@ -7,7 +7,41 @@
 java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 ```
 
-默认加载经过 manifest 和 fixture digest 验证的 `evals/datasets/v0.3` draft。也可通过 `--dataset`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数；`--fixture` 仅用于兼容没有 manifest 的 v0.1 数据集。v2 契约详见 [Eval Dataset v2 与 Fixture 治理](EVAL_DATASET_V2.md)。
+默认加载经过 manifest 和 fixture digest 验证的 `evals/datasets/v0.3` core。也可通过 `--dataset`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数；`--fixture` 仅用于兼容没有 manifest 的 v0.1 数据集。v2 契约详见 [Eval Dataset v2 与 Fixture 治理](EVAL_DATASET_V2.md)。
+
+## 可恢复的真实模型实验
+
+新实验必须显式提供模型、Prompt 版本与文件，以及按每百万 Token 计的输入、缓存输入和输出价格快照：
+
+```bash
+./mvnw -q -pl apps/cli -am package -DskipTests
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
+  --output evals/runs/<run-id> \
+  --run-id <run-id> \
+  --model <model> \
+  --reasoning-effort high \
+  --prompt-file evals/prompts/baseline-prompt-v2.md \
+  --prompt-version baseline-prompt-v2 \
+  --policy-version codex-agent-v2 \
+  --input-price <usd-per-1m> \
+  --cached-input-price <usd-per-1m> \
+  --output-price <usd-per-1m> \
+  --pricing-source <source> \
+  --maximum-cost-usd 10 \
+  --maximum-tokens 2000000 \
+  --maximum-duration PT4H \
+  --maximum-provider-errors 3 \
+  --concurrency 2
+```
+
+恢复时只需指定相同 dataset 和实验目录：
+
+```bash
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
+  --output evals/runs/<run-id> --resume
+```
+
+Runner 在调用前原子写入稳定 attempt checkpoint。已完成任务不会再次调用 provider；进程退出时仍为 `RUNNING` 的 attempt 会转为 `NEEDS_REVIEW`，其余待执行任务继续。全局成本、Token、累计耗时、provider error 和并发数均来自不可变 manifest。Codex Prompt 通过标准输入传递，登录凭据只从现有 Codex 环境继承，不写入命令参数、manifest、checkpoint 或报告。模型完成后才会叠加隐藏测试，reference production code 永远不会进入模型工作区。
 
 ## Dataset v0.3 core
 

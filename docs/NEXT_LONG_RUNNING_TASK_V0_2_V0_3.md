@@ -112,6 +112,8 @@ LegacyPilot 的核心价值是可治理、可恢复、可评测的 Java Agent Ha
 
 ### Issue 37 — 可恢复的真实模型 Eval Runner
 
+**实施状态（2026-08-30）：** 已完成。新增不可变实验 manifest、Prompt SHA-256 与价格/环境快照、稳定 task/attempt checkpoint、原子结果落盘、成本/Token/耗时/provider error/并发预算、Codex 隔离执行器和 `eval-model-run --resume`。故障注入覆盖任务开始前、模型响应后、补丁后和结果落盘前；已完成调用不重放，不确定调用进入 `NEEDS_REVIEW`，其他任务继续。离线 20-task 新建/恢复集成测试、全项目验证和 20/20 reference ceiling 均通过。
+
 #### 运行协议
 
 - 每次实验先写不可变 run manifest：Git SHA、dataset SHA、模型、Prompt SHA、策略/Policy 版本、价格快照和环境；

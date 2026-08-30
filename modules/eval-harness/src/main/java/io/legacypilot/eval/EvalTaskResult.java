@@ -14,7 +14,7 @@ public record EvalTaskResult(
     boolean testsPassed,
     double retrievalRecall,
     int steps,
-    int tokens,
+    EvalTokenUsage usage,
     BigDecimal estimatedCostUsd,
     Duration duration,
     List<String> artifacts,
@@ -22,6 +22,7 @@ public record EvalTaskResult(
   public EvalTaskResult {
     Objects.requireNonNull(taskId);
     Objects.requireNonNull(status);
+    Objects.requireNonNull(usage);
     Objects.requireNonNull(estimatedCostUsd);
     Objects.requireNonNull(duration);
     artifacts = List.copyOf(Objects.requireNonNull(artifacts));
@@ -31,11 +32,44 @@ public record EvalTaskResult(
         || retrievalRecall < 0
         || retrievalRecall > 1
         || steps < 0
-        || tokens < 0
         || estimatedCostUsd.signum() < 0
         || duration.isNegative()) {
       throw new IllegalArgumentException("eval result is invalid");
     }
+  }
+
+  public EvalTaskResult(
+      String taskId,
+      Status status,
+      int passedAssertions,
+      int totalAssertions,
+      boolean compiled,
+      boolean testsPassed,
+      double retrievalRecall,
+      int steps,
+      int tokens,
+      BigDecimal estimatedCostUsd,
+      Duration duration,
+      List<String> artifacts,
+      String failure) {
+    this(
+        taskId,
+        status,
+        passedAssertions,
+        totalAssertions,
+        compiled,
+        testsPassed,
+        retrievalRecall,
+        steps,
+        new EvalTokenUsage(tokens, 0, 0, 0),
+        estimatedCostUsd,
+        duration,
+        artifacts,
+        failure);
+  }
+
+  public int tokens() {
+    return usage.totalTokens();
   }
 
   public enum Status {

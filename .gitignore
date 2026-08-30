@@ -24,3 +24,7 @@ application-local.yml
 .legacy-pilot/
 workspaces/
 traces/
+
+# Provider-backed eval workspaces are reproducible from their manifest and fixture digests.
+evals/runs/**/workspaces/
+evals/runs/**/checkpoint.json.previous
