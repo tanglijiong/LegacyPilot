@@ -291,6 +291,9 @@ class CliCommandsTest {
                         "5",
                         "--pricing-source",
                         "test",
+                        "--model-adapter",
+                        "codex",
+                        "--allow-external-provider",
                         "--codex-executable",
                         codex.toString(),
                         "--references",
@@ -318,8 +321,101 @@ class CliCommandsTest {
                         "--output",
                         experiment.toString(),
                         "--resume",
+                        "--allow-external-provider",
                         "--codex-executable",
                         codex.toString(),
+                        "--references",
+                        root.resolve("evals/reference-solutions").toString(),
+                        "--maven-wrapper",
+                        maven.toString()));
+    assertEquals(0, resumed.exitCode());
+    assertEquals(20, Files.readAllLines(calls).size());
+  }
+
+  @Test
+  void runsAndResumesTheDefaultAirGappedContainerAdapter() throws Exception {
+    var root = Path.of("../..").toAbsolutePath().normalize();
+    var calls = temporary.resolve("docker-calls.txt");
+    var docker = temporary.resolve("fake-docker");
+    Files.writeString(
+        docker,
+        """
+        #!/bin/sh
+        if [ "$1" = "--version" ]; then echo 'Docker test'; exit 0; fi
+        printf '%%s\n' "$*" >> '%s'
+        cat >/dev/null
+        printf '%%s\n' '{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":2}}'
+        """
+            .formatted(calls));
+    assertTrue(docker.toFile().setExecutable(true));
+    var maven = temporary.resolve("offline-mvnw");
+    Files.writeString(maven, "#!/bin/sh\nexit 0\n");
+    assertTrue(maven.toFile().setExecutable(true));
+    var prompt = temporary.resolve("airgap-prompt.md");
+    Files.writeString(prompt, "Implement inside the bank boundary: {{requirement}}\n");
+    var experiment = temporary.resolve("airgap-run");
+    var mapper = new ObjectMapper().findAndRegisterModules();
+    var commit = "0123456789abcdef0123456789abcdef01234567";
+
+    var started =
+        captureResult(
+            () ->
+                new CommandLine(
+                        new EvalModelRunCommand(
+                            new JsonOutput(mapper), mapper, () -> "", () -> commit))
+                    .execute(
+                        "--dataset",
+                        root.resolve("evals/datasets/v0.3").toString(),
+                        "--output",
+                        experiment.toString(),
+                        "--run-id",
+                        "airgap-run",
+                        "--agent-image",
+                        "registry.bank.local/model-agent@sha256:" + "a".repeat(64),
+                        "--model",
+                        "bank-code-model",
+                        "--prompt-file",
+                        prompt.toString(),
+                        "--prompt-version",
+                        "bank-prompt-v1",
+                        "--input-price",
+                        "0",
+                        "--cached-input-price",
+                        "0",
+                        "--output-price",
+                        "0",
+                        "--pricing-source",
+                        "private-infrastructure",
+                        "--docker-executable",
+                        docker.toString(),
+                        "--references",
+                        root.resolve("evals/reference-solutions").toString(),
+                        "--maven-wrapper",
+                        maven.toString(),
+                        "--concurrency",
+                        "2"));
+
+    assertEquals(0, started.exitCode());
+    assertEquals(20, Files.readAllLines(calls).size());
+    var manifest = mapper.readTree(experiment.resolve("manifest.json").toFile());
+    assertEquals("airgap-container", manifest.path("environment").path("modelAdapter").asText());
+    assertEquals("air-gapped", manifest.path("environment").path("networkBoundary").asText());
+    assertTrue(Files.readString(calls).contains("--pull never --network none"));
+
+    var resumed =
+        captureResult(
+            () ->
+                new CommandLine(
+                        new EvalModelRunCommand(
+                            new JsonOutput(mapper), mapper, () -> "dirty", () -> commit))
+                    .execute(
+                        "--dataset",
+                        root.resolve("evals/datasets/v0.3").toString(),
+                        "--output",
+                        experiment.toString(),
+                        "--resume",
+                        "--docker-executable",
+                        docker.toString(),
                         "--references",
                         root.resolve("evals/reference-solutions").toString(),
                         "--maven-wrapper",
@@ -380,6 +476,28 @@ class CliCommandsTest {
                             invalidPrompt,
                             temporary.resolve("unused"))));
     assertEquals(1, invalid.exitCode());
+
+    var externalArguments =
+        new java.util.ArrayList<>(
+            List.of(
+                providerStartArguments(
+                    root,
+                    temporary.resolve("external"),
+                    validPrompt,
+                    temporary.resolve("unused"))));
+    externalArguments.remove("--allow-external-provider");
+    var externalWithoutConsent =
+        captureResult(
+            () ->
+                new CommandLine(
+                        new EvalModelRunCommand(
+                            new JsonOutput(mapper),
+                            mapper,
+                            () -> "",
+                            () -> "0123456789abcdef0123456789abcdef01234567"))
+                    .execute(externalArguments.toArray(String[]::new)));
+    assertEquals(1, externalWithoutConsent.exitCode());
+    assertTrue(externalWithoutConsent.text().contains("explicit governed adapter"));
   }
 
   @Test
@@ -483,6 +601,9 @@ class CliCommandsTest {
       "5",
       "--pricing-source",
       "test",
+      "--model-adapter",
+      "codex",
+      "--allow-external-provider",
       "--codex-executable",
       executable.toString()
     };

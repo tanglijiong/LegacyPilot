@@ -1,12 +1,15 @@
 package io.legacypilot.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.legacypilot.eval.CodexEvalTaskExecutor;
+import io.legacypilot.eval.AirGappedContainerModelAdapter;
+import io.legacypilot.eval.CodexCliModelAdapter;
 import io.legacypilot.eval.EvalDatasetLoader;
 import io.legacypilot.eval.EvalExperimentBudget;
 import io.legacypilot.eval.EvalExperimentManifest;
 import io.legacypilot.eval.EvalExperimentStore;
+import io.legacypilot.eval.EvalModelAdapter;
 import io.legacypilot.eval.EvalPricingSnapshot;
+import io.legacypilot.eval.GovernedEvalTaskExecutor;
 import io.legacypilot.eval.MavenFixtureVerifier;
 import io.legacypilot.eval.ResumableEvalRunner;
 import java.io.IOException;
@@ -34,7 +37,7 @@ import picocli.CommandLine.Option;
 @Command(
     name = "eval-model-run",
     mixinStandardHelpOptions = true,
-    description = "Run or resume a durable provider-backed evaluation experiment.")
+    description = "Run or resume a durable governed-model evaluation experiment.")
 public class EvalModelRunCommand implements Callable<Integer> {
   private final JsonOutput output;
   private final ObjectMapper mapper;
@@ -98,6 +101,21 @@ public class EvalModelRunCommand implements Callable<Integer> {
   @Option(names = "--codex-executable", defaultValue = "codex")
   private String codexExecutable;
 
+  @Option(names = "--model-adapter", defaultValue = "airgap-container")
+  private String modelAdapter;
+
+  @Option(names = "--allow-external-provider")
+  private boolean allowExternalProvider;
+
+  @Option(names = "--agent-image")
+  private String agentImage;
+
+  @Option(names = "--agent-command", defaultValue = "/opt/legacy-pilot/model-agent")
+  private String agentCommand;
+
+  @Option(names = "--docker-executable", defaultValue = "docker")
+  private String dockerExecutable;
+
   @Option(names = "--references", defaultValue = "evals/reference-solutions")
   private Path references;
 
@@ -147,27 +165,25 @@ public class EvalModelRunCommand implements Callable<Integer> {
       requireStartOptions();
       requireCleanRepository();
       prompt = readPrompt(promptFile);
+      var environment = executionEnvironment();
       persistPrompt(prompt);
-      manifest = createManifest(loaded, prompt);
+      manifest = createManifest(loaded, prompt, environment);
     }
-    var executable = resolveExecutable(codexExecutable);
+    var adapter = createAdapter(manifest);
     var verifier =
         new MavenFixtureVerifier(mavenWrapper.toAbsolutePath().normalize(), Duration.ofMinutes(3));
     var executor =
-        new CodexEvalTaskExecutor(
+        new GovernedEvalTaskExecutor(
             loaded.fixtures().entrySet().stream()
                 .collect(
                     java.util.stream.Collectors.toMap(
                         Map.Entry::getKey, entry -> entry.getValue().path())),
             experimentRoot.resolve("workspaces"),
             references,
-            executable,
-            manifest.model(),
-            manifest.reasoningEffort(),
             prompt,
             manifest.pricing(),
             verifier,
-            mapper);
+            adapter);
     var runner = new ResumableEvalRunner(Clock.systemUTC(), store);
     var checkpoint =
         resume
@@ -180,7 +196,7 @@ public class EvalModelRunCommand implements Callable<Integer> {
   }
 
   private EvalExperimentManifest createManifest(
-      io.legacypilot.eval.EvalDataset loaded, String prompt) {
+      io.legacypilot.eval.EvalDataset loaded, String prompt, Map<String, String> environment) {
     return new EvalExperimentManifest(
         "eval-experiment-v1",
         runId,
@@ -194,11 +210,7 @@ public class EvalModelRunCommand implements Callable<Integer> {
         policyVersion,
         new EvalPricingSnapshot(
             "USD", "per-1m-tokens", inputPrice, cachedInputPrice, outputPrice, pricingSource),
-        Map.of(
-            "java", System.getProperty("java.version"),
-            "os", System.getProperty("os.name"),
-            "architecture", System.getProperty("os.arch"),
-            "codex", commandOutput(resolveExecutable(codexExecutable), "--version")),
+        environment,
         new EvalExperimentBudget(
             maximumCostUsd, maximumDuration, maximumTokens, maximumProviderErrors, concurrency),
         loaded.tasks().stream().map(io.legacypilot.eval.EvalTask::id).toList(),
@@ -217,10 +229,67 @@ public class EvalModelRunCommand implements Callable<Integer> {
         || cachedInputPrice == null
         || outputPrice == null
         || pricingSource == null
-        || pricingSource.isBlank()) {
+        || pricingSource.isBlank()
+        || (!modelAdapter.matches("airgap-container|codex"))
+        || (modelAdapter.equals("airgap-container") && (agentImage == null || agentImage.isBlank()))
+        || (modelAdapter.equals("codex") && !allowExternalProvider)) {
       throw new IllegalArgumentException(
-          "new eval runs require run id, model, prompt metadata, and a complete price snapshot");
+          "new eval runs require model metadata, pricing, and an explicit governed adapter");
     }
+  }
+
+  private EvalModelAdapter createAdapter(EvalExperimentManifest manifest) {
+    var adapter = manifest.environment().get("modelAdapter");
+    if ("airgap-container".equals(adapter)) {
+      return new AirGappedContainerModelAdapter(
+          resolveExecutable(dockerExecutable),
+          requiredEnvironment(manifest, "agentImage"),
+          requiredEnvironment(manifest, "agentCommand"),
+          manifest.model(),
+          manifest.reasoningEffort(),
+          mapper);
+    }
+    if ("codex".equals(adapter)) {
+      if (!allowExternalProvider) {
+        throw new IllegalArgumentException(
+            "Codex is an external provider; pass --allow-external-provider explicitly");
+      }
+      return new CodexCliModelAdapter(
+          resolveExecutable(codexExecutable), manifest.model(), manifest.reasoningEffort(), mapper);
+    }
+    throw new IllegalStateException("persisted eval model adapter is unsupported");
+  }
+
+  private Map<String, String> executionEnvironment() {
+    var values = new java.util.LinkedHashMap<String, String>();
+    values.put("java", System.getProperty("java.version"));
+    values.put("os", System.getProperty("os.name"));
+    values.put("architecture", System.getProperty("os.arch"));
+    values.put("modelAdapter", modelAdapter);
+    if (modelAdapter.equals("airgap-container")) {
+      if (!agentImage.matches("[A-Za-z0-9./_-]+@sha256:[0-9a-f]{64}")
+          || !agentCommand.matches("/[A-Za-z0-9._/-]+")) {
+        throw new IllegalArgumentException("air-gapped image or agent command is invalid");
+      }
+      values.put("networkBoundary", "air-gapped");
+      values.put("agentImage", agentImage);
+      values.put("agentCommand", agentCommand);
+      values.put("docker", commandOutput(resolveExecutable(dockerExecutable), "--version"));
+    } else if (modelAdapter.equals("codex")) {
+      values.put("networkBoundary", "external-provider-explicit");
+      values.put("codex", commandOutput(resolveExecutable(codexExecutable), "--version"));
+    } else {
+      throw new IllegalArgumentException("model adapter is unsupported");
+    }
+    return Map.copyOf(values);
+  }
+
+  private static String requiredEnvironment(EvalExperimentManifest manifest, String key) {
+    var value = manifest.environment().get(key);
+    if (value == null || value.isBlank()) {
+      throw new IllegalStateException("persisted eval adapter configuration is incomplete");
+    }
+    return value;
   }
 
   private void persistPrompt(String prompt) {

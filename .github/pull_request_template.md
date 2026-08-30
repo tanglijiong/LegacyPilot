@@ -12,6 +12,7 @@ Closes #
 - [ ] Tests cover the new or changed behavior.
 - [ ] Documentation and examples are updated where needed.
 - [ ] No credentials, private code, target workspaces, or raw traces are committed.
+- [ ] Gitleaks passes against the full Git history; any allowlist entry is an exact test sentinel.
 
 ## Safety and architecture
 

@@ -9,20 +9,25 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 
 默认加载经过 manifest 和 fixture digest 验证的 `evals/datasets/v0.3` core。也可通过 `--dataset`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数；`--fixture` 仅用于兼容没有 manifest 的 v0.1 数据集。v2 契约详见 [Eval Dataset v2 与 Fixture 治理](EVAL_DATASET_V2.md)。
 
-## 可恢复的真实模型实验
+## 可恢复的内网模型实验
 
-新实验必须显式提供模型、Prompt 版本与文件，以及按每百万 Token 计的输入、缓存输入和输出价格快照：
+Runner 核心只依赖通用 `EvalModelAdapter`，不依赖模型厂商。默认适配器是固定镜像摘要的本地模型容器：镜像必须已由银行内部镜像仓库预置，启动时使用 `--pull never`、`--network none`、只读根文件系统、无 Linux capabilities 和 `no-new-privileges`。因此模型运行期间没有外网或内网连接，模型权重和 Agent 必须全部包含在批准镜像中。
+
+镜像内 Agent 从标准输入读取 Prompt，在 `/workspace` 修改代码并输出 JSONL；入口接收 `--workspace`、`--model`、`--reasoning-effort` 和 `--jsonl`。新实验必须显式提供模型、Prompt、固定镜像及价格快照；私有化模型没有按 Token 费用时价格可以记录为 `0`，另行统计基础设施成本。
 
 ```bash
 ./mvnw -q -pl apps/cli -am package -DskipTests
 java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --output evals/runs/<run-id> \
   --run-id <run-id> \
+  --model-adapter airgap-container \
+  --agent-image registry.bank.local/legacy-pilot/model-agent@sha256:<64-hex-digest> \
+  --agent-command /opt/legacy-pilot/model-agent \
   --model <model> \
   --reasoning-effort high \
   --prompt-file evals/prompts/baseline-prompt-v2.md \
   --prompt-version baseline-prompt-v2 \
-  --policy-version codex-agent-v2 \
+  --policy-version bank-airgap-agent-v1 \
   --input-price <usd-per-1m> \
   --cached-input-price <usd-per-1m> \
   --output-price <usd-per-1m> \
@@ -34,14 +39,26 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --concurrency 2
 ```
 
-恢复时只需指定相同 dataset 和实验目录：
+恢复时只需指定相同 dataset 和实验目录；适配器、固定镜像、网络边界和 Agent 入口来自不可变 manifest，不能在恢复时切换：
 
 ```bash
 java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --output evals/runs/<run-id> --resume
 ```
 
-Runner 在调用前原子写入稳定 attempt checkpoint。已完成任务不会再次调用 provider；进程退出时仍为 `RUNNING` 的 attempt 会转为 `NEEDS_REVIEW`，其余待执行任务继续。全局成本、Token、累计耗时、provider error 和并发数均来自不可变 manifest。Codex Prompt 通过标准输入传递，登录凭据只从现有 Codex 环境继承，不写入命令参数、manifest、checkpoint 或报告。模型完成后才会叠加隐藏测试，reference production code 永远不会进入模型工作区。
+Runner 在调用前原子写入稳定 attempt checkpoint。已完成任务不会再次调用模型；进程退出时仍为 `RUNNING` 的 attempt 会转为 `NEEDS_REVIEW`，其余待执行任务继续。全局成本、Token、累计耗时、provider error 和并发数均来自不可变 manifest。Prompt 只通过标准输入传递；父进程会移除 credential、token、password、authorization 和 proxy 环境变量。模型完成后才会叠加隐藏测试，reference production code 永远不会进入模型工作区。
+
+### 显式外部公开基准
+
+Codex 兼容适配器只用于公开合成 fixture 的研发基准，不是银行部署路径。它必须同时提供 `--model-adapter codex` 和 `--allow-external-provider`；缺少任一项都会拒绝启动，恢复外部实验也必须再次显式确认。任何真实银行代码、日志、Prompt 或凭据都不得使用该模式。
+
+### 密钥与零外网门禁
+
+- Gitleaks v3 在 Security 工作流中扫描完整 Git 历史，不只检查当前文件；白名单只包含精确的测试哨兵值。
+- Air-gap 命令构造测试固定验证 `--pull never`、`--network none`、只读根文件系统和权限收缩参数。
+- `.env`、本地配置、运行工作区和 checkpoint 备份不进入版本库；Prompt 和 manifest 拒绝 credential 字段。
+- `evals/runs/` 整体默认忽略；公开证据必须经过独立脱敏审阅后复制到 `evals/baselines/`，不能直接提交原始运行目录。
+- 生产部署还应在宿主防火墙或 Kubernetes NetworkPolicy 层默认拒绝 egress，形成独立于应用参数的第二道边界。
 
 ## Dataset v0.3 core
 

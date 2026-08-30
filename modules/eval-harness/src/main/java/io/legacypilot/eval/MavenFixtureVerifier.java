@@ -30,16 +30,16 @@ public final class MavenFixtureVerifier implements FixtureVerifier {
             mavenWrapper.toString(),
             "--batch-mode",
             "--no-transfer-progress",
+            "--offline",
             "-q",
             "-f",
             workspace.resolve("pom.xml").toString(),
             "test");
     try {
-      var process =
-          new ProcessBuilder(command)
-              .directory(workspace.toFile())
-              .redirectErrorStream(true)
-              .start();
+      var builder =
+          new ProcessBuilder(command).directory(workspace.toFile()).redirectErrorStream(true);
+      JsonlProcessModelAdapter.scrubSensitiveEnvironment(builder.environment());
+      var process = builder.start();
       try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
         var output =
             executor.submit(

@@ -28,4 +28,4 @@ jobs:
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
       - name: Explain current scope
-        run: echo "This workflow runs the frozen deterministic 20-task reference ceiling; provider-backed model baselines remain an explicit release action."
+        run: echo "This workflow verifies the frozen 20-task ceiling and the air-gapped model adapter policy; real model baselines remain an explicit release action."

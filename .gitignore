@@ -25,6 +25,6 @@ application-local.yml
 workspaces/
 traces/
 
-# Provider-backed eval workspaces are reproducible from their manifest and fixture digests.
-evals/runs/**/workspaces/
-evals/runs/**/checkpoint.json.previous
+# Model eval runs may contain prompts, generated code, checkpoints, and internal metadata.
+# Publish only a separately reviewed and redacted summary under evals/baselines/.
+evals/runs/

@@ -1,0 +1,13 @@
+title = "LegacyPilot secret scanning policy"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Exact non-secret sentinel values used by redaction tests"
+regexTarget = "match"
+regexes = [
+  '''raw-secret''',
+  '''plain-secret''',
+  '''must-not-persist'''
+]
