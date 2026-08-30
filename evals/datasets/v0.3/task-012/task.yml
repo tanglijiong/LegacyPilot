@@ -1,0 +1,22 @@
+id: task-012
+category: time-semantics
+difficulty: easy
+changeType: defect-fix
+expectedImpact: single-file
+requirement: Interpret scheduler LocalDateTime inputs as UTC instead of using the machine default time zone.
+fixtureId: job-scheduler-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/jobs/JobSchedulerTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+relevantSymbols:
+  - io.legacypilot.fixtures.jobs.JobScheduler#schedule
+maximumSteps: 8
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 24000
+  maximumMemoryMb: 2048
+  maximumCostCents: 250

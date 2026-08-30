@@ -1,6 +1,6 @@
 schemaVersion: eval-dataset-v2
-datasetVersion: v0.3-draft.1
-datasetSha256: 3a4c6ef10889a9f7736cc9cca45305f273a3c238f526c2c67017be5a962aaa38
+datasetVersion: v0.3-draft.2
+datasetSha256: d1a4e9b8190b2dc502a6e26069c5596d7c55dd104975c45327ef0d6e8883c1d8
 fixtureRegistry: ../../fixtures
 tasks:
   - task-001
@@ -8,3 +8,13 @@ tasks:
   - task-003
   - task-004
   - task-005
+  - task-006
+  - task-007
+  - task-008
+  - task-009
+  - task-010
+  - task-011
+  - task-012
+  - task-013
+  - task-014
+  - task-015

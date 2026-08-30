@@ -1,0 +1,22 @@
+id: task-007
+category: validation
+difficulty: easy
+changeType: defect-fix
+expectedImpact: single-file
+requirement: Reject blank SKUs and non-positive quantities before any order repository write.
+fixtureId: order-service-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/orders/OrderServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+relevantSymbols:
+  - io.legacypilot.fixtures.orders.OrderService#create
+maximumSteps: 8
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 24000
+  maximumMemoryMb: 2048
+  maximumCostCents: 250

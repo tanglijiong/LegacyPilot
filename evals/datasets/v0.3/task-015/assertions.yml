@@ -1,0 +1,12 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  value: Comparator.comparing(Job::scheduledAt).thenComparing(Job::id)
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  value: offset < 0
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  value: limit <= 0
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+  value: offset >= ordered.size()

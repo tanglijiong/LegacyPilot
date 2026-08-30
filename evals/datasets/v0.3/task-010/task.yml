@@ -1,0 +1,22 @@
+id: task-010
+category: security
+difficulty: easy
+changeType: hardening
+expectedImpact: single-file
+requirement: Redact the payment token from order audit output while preserving the order identifier.
+fixtureId: order-service-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderAuditFormatter.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/orders/OrderServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderAuditFormatter.java
+relevantSymbols:
+  - io.legacypilot.fixtures.orders.OrderAuditFormatter#format
+maximumSteps: 6
+timeoutSeconds: 90
+resourceBudget:
+  maximumTokens: 16000
+  maximumMemoryMb: 2048
+  maximumCostCents: 200

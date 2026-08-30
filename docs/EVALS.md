@@ -11,7 +11,7 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 
 ## Dataset v0.3 draft
 
-`v0.3-draft.1` 先将原始五任务迁移到新 schema，用于验证固定任务顺序、fixture provenance、SHA-256、文件修改范围、超时和资源预算。它不是最终 v0.3 基线；task-006–020 完成后才会冻结 20-task manifest。
+`v0.3-draft.2` 已扩展到 15 个任务和 3 个固定 fixture。新增订单服务与任务调度器场景，覆盖幂等、输入验证、异常映射、查询边界、敏感信息、重试、UTC、并发、解析和稳定分页。它仍不是最终 v0.3 基线；task-016–020 完成后才会冻结 20-task manifest。
 
 ## Dataset v0.1
 

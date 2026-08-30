@@ -1,0 +1,9 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+  value: findByRequestId
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: repository.findByRequestId(requestId)
+- type: MATCHES_REGEX
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: if\s*\(existing\.isPresent\(\)\)[\s\S]*return\s+existing\.get\(\)

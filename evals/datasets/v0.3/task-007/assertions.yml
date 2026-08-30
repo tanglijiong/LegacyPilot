@@ -1,0 +1,9 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: sku.isBlank()
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: quantity <= 0
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: INVALID_ORDER_ITEM

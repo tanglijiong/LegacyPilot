@@ -1,0 +1,22 @@
+id: task-011
+category: retry-policy
+difficulty: medium
+changeType: reliability
+expectedImpact: single-file
+requirement: Schedule retries with 30-second exponential backoff by attempt, capped at one hour, and reject negative attempts.
+fixtureId: job-scheduler-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/RetryPolicy.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/jobs/JobSchedulerTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/RetryPolicy.java
+relevantSymbols:
+  - io.legacypilot.fixtures.jobs.RetryPolicy#nextAttempt
+maximumSteps: 10
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 28000
+  maximumMemoryMb: 2048
+  maximumCostCents: 300

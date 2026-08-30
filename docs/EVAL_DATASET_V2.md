@@ -36,6 +36,6 @@ SHA-256 对排序后的相对路径与文件内容计算；`.git`、`.legacy-pil
 
 ## 当前冻结程度
 
-`v0.3-draft.1` 先迁移原有 task-001–005，用来校准 schema、fixture registry 和完整性检查。它还不是最终 20-task dataset；task-006–020 完成 ceiling 与完整性验证后才会冻结正式 manifest。
+`v0.3-draft.2` 包含 task-001–015，使用 banking、order service 和 job scheduler 三个固定 fixture，用来校准 schema、fixture registry、任务多样性和完整性检查。它还不是最终 20-task dataset；task-016–020 完成 ceiling 与完整性验证后才会冻结正式 manifest。
 
 旧 `evals/datasets/v0.1` 保持原文件不变，加载器继续兼容其目录格式。

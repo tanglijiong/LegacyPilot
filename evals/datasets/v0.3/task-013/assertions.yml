@@ -1,0 +1,9 @@
+- type: MATCHES_REGEX
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+  value: synchronized\s+boolean\s+claim
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+  value: JobStatus.READY
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+  value: JobStatus.RUNNING

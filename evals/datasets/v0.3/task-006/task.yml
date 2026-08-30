@@ -1,0 +1,25 @@
+id: task-006
+category: idempotency
+difficulty: medium
+changeType: reliability
+expectedImpact: multi-file
+requirement: Make order creation idempotent by requestId so repeated requests return the original order without another repository write.
+fixtureId: order-service-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/orders/OrderServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+relevantSymbols:
+  - io.legacypilot.fixtures.orders.OrderRepository
+  - io.legacypilot.fixtures.orders.OrderService#create
+maximumSteps: 12
+timeoutSeconds: 150
+resourceBudget:
+  maximumTokens: 32000
+  maximumMemoryMb: 2048
+  maximumCostCents: 350

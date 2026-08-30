@@ -1,0 +1,12 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
+  value: value.trim()
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
+  value: priority < 1
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
+  value: priority > 5
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
+  value: INVALID_PRIORITY

@@ -1,0 +1,9 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/RetryPolicy.java
+  value: "3600"
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/RetryPolicy.java
+  value: Math.min
+- type: MATCHES_REGEX
+  path: src/main/java/io/legacypilot/fixtures/jobs/RetryPolicy.java
+  value: attempt\s*<\s*0

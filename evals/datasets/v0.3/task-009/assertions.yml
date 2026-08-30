@@ -1,0 +1,9 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+  value: findByCreatedAtBetween
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: "!toExclusive.isAfter(fromInclusive)"
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+  value: INVALID_HISTORY_RANGE

@@ -28,4 +28,4 @@ jobs:
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
       - name: Explain current scope
-        run: echo "This workflow runs the deterministic five-task reference ceiling; provider-backed model baselines remain an explicit release action."
+        run: echo "This workflow runs the deterministic 15-task reference ceiling; provider-backed model baselines remain an explicit release action."

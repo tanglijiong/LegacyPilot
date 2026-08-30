@@ -39,14 +39,29 @@ class EvalHarnessTest {
         new EvalDatasetLoader().loadVersioned(repositoryRoot().resolve("evals/datasets/v0.3"));
 
     assertEquals("eval-dataset-v2", dataset.schemaVersion());
-    assertEquals("v0.3-draft.1", dataset.datasetVersion());
-    assertEquals(5, dataset.tasks().size());
+    assertEquals("v0.3-draft.2", dataset.datasetVersion());
+    assertEquals(15, dataset.tasks().size());
     assertEquals("banking-fixture-v2", dataset.tasks().getFirst().fixtureId());
-    assertEquals("hard", dataset.tasks().getLast().difficulty());
-    assertEquals(48_000, dataset.tasks().getLast().resourceBudget().maximumTokens());
+    assertEquals("task-015", dataset.tasks().getLast().id());
+    assertEquals("medium", dataset.tasks().getLast().difficulty());
+    assertEquals(28_000, dataset.tasks().getLast().resourceBudget().maximumTokens());
     assertFalse(dataset.tasks().get(1).assertions().getFirst().value().isBlank());
     assertTrue(
         dataset.fixtures().get("banking-fixture-v2").path().endsWith("samples/banking-demo"));
+    assertTrue(
+        dataset
+            .fixtures()
+            .get("order-service-fixture-v1")
+            .path()
+            .endsWith("samples/order-service-fixture"));
+    assertTrue(
+        dataset
+            .fixtures()
+            .get("job-scheduler-fixture-v1")
+            .path()
+            .endsWith("samples/job-scheduler-fixture"));
+    assertEquals(3, dataset.tasks().stream().map(EvalTask::fixtureId).distinct().count());
+    assertTrue(dataset.tasks().stream().map(EvalTask::category).distinct().count() >= 10);
   }
 
   @Test
@@ -70,6 +85,42 @@ class EvalHarnessTest {
             IllegalArgumentException.class,
             () -> new EvalDatasetLoader().loadVersioned(fixtureTamper));
     assertTrue(fixtureFailure.getMessage().contains("fixture checksum"));
+  }
+
+  @Test
+  void everyGovernedTaskStartsFailingAndItsReferenceStaysInDeclaredScope() throws Exception {
+    var root = repositoryRoot();
+    var dataset = new EvalDatasetLoader().loadVersioned(root.resolve("evals/datasets/v0.3"));
+    var assertionEngine = new SourceAssertionEngine();
+
+    for (var task : dataset.tasks()) {
+      var fixture = dataset.fixtures().get(task.fixtureId()).path();
+      assertFalse(
+          assertionEngine.evaluate(fixture, task.assertions()).successful(),
+          task.id() + " must not already pass on its baseline fixture");
+
+      var reference = root.resolve("evals/reference-solutions").resolve(task.id());
+      List<String> productionFiles;
+      try (var paths = Files.walk(reference.resolve("src/main"))) {
+        productionFiles =
+            paths
+                .filter(Files::isRegularFile)
+                .map(reference::relativize)
+                .map(Path::toString)
+                .sorted()
+                .toList();
+      }
+      assertEquals(
+          task.expectedFiles().stream().sorted().toList(),
+          productionFiles,
+          task.id() + " reference files must match its declared output scope");
+      assertTrue(
+          task.allowedFiles().containsAll(productionFiles),
+          task.id() + " reference files must all be allowed");
+      assertTrue(
+          productionFiles.stream().noneMatch(task.forbiddenFiles()::contains),
+          task.id() + " reference files must not be forbidden");
+    }
   }
 
   @Test

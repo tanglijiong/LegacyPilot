@@ -1,0 +1,14 @@
+schemaVersion: eval-fixture-v1
+id: order-service-fixture-v1
+source: repository:samples/order-service-fixture
+revision: order-service-fixture-v1
+license: Apache-2.0
+sha256: 315a4e248f1902eb655fdd3331b63157651e49a1c9cac874a74507822296613c
+path: ../../../samples/order-service-fixture
+buildCommand:
+  - ../../mvnw
+  - --batch-mode
+  - --no-transfer-progress
+  - -f
+  - pom.xml
+  - test

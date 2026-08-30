@@ -1,0 +1,8 @@
+- type: FILE_EXISTS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderNotFoundException.java
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderController.java
+  value: ORDER_NOT_FOUND
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/orders/OrderController.java
+  value: ApiResponse.notFound

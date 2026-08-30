@@ -1,0 +1,14 @@
+schemaVersion: eval-fixture-v1
+id: job-scheduler-fixture-v1
+source: repository:samples/job-scheduler-fixture
+revision: job-scheduler-fixture-v1
+license: Apache-2.0
+sha256: 7b9baab9db1cc4f69af2ff65db33f5ddc879543260d15f82694f09900fdead75
+path: ../../../samples/job-scheduler-fixture
+buildCommand:
+  - ../../mvnw
+  - --batch-mode
+  - --no-transfer-progress
+  - -f
+  - pom.xml
+  - test

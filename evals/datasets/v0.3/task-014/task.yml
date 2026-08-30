@@ -1,0 +1,22 @@
+id: task-014
+category: input-parsing
+difficulty: easy
+changeType: validation
+expectedImpact: single-file
+requirement: Parse trimmed job priorities and accept only integer values from 1 through 5 with a stable INVALID_PRIORITY error.
+fixtureId: job-scheduler-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/jobs/JobSchedulerTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
+relevantSymbols:
+  - io.legacypilot.fixtures.jobs.JobRequestParser#parsePriority
+maximumSteps: 8
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 24000
+  maximumMemoryMb: 2048
+  maximumCostCents: 250

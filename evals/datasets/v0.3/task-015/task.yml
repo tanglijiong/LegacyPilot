@@ -1,0 +1,22 @@
+id: task-015
+category: pagination
+difficulty: medium
+changeType: determinism
+expectedImpact: single-file
+requirement: Return stable job pages ordered by scheduledAt and then id, with safe empty pages and validation of offset and limit.
+fixtureId: job-scheduler-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/jobs/JobSchedulerTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+relevantSymbols:
+  - io.legacypilot.fixtures.jobs.JobQueryService#page
+maximumSteps: 10
+timeoutSeconds: 120
+resourceBudget:
+  maximumTokens: 28000
+  maximumMemoryMb: 2048
+  maximumCostCents: 300

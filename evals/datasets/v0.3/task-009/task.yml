@@ -1,0 +1,25 @@
+id: task-009
+category: data-boundary
+difficulty: medium
+changeType: feature
+expectedImpact: multi-file
+requirement: Add order history lookup for a half-open instant range and reject ranges whose end is not after the start before querying.
+fixtureId: order-service-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/orders/OrderServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+relevantSymbols:
+  - io.legacypilot.fixtures.orders.OrderRepository
+  - io.legacypilot.fixtures.orders.OrderService
+maximumSteps: 12
+timeoutSeconds: 150
+resourceBudget:
+  maximumTokens: 32000
+  maximumMemoryMb: 2048
+  maximumCostCents: 350

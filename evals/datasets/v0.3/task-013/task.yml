@@ -1,0 +1,22 @@
+id: task-013
+category: concurrency
+difficulty: hard
+changeType: defect-fix
+expectedImpact: single-file
+requirement: Make job claiming atomic within a scheduler instance so concurrent callers cannot both claim the same READY job.
+fixtureId: job-scheduler-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/jobs/JobSchedulerTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+relevantSymbols:
+  - io.legacypilot.fixtures.jobs.JobScheduler#claim
+maximumSteps: 12
+timeoutSeconds: 150
+resourceBudget:
+  maximumTokens: 32000
+  maximumMemoryMb: 2048
+  maximumCostCents: 350

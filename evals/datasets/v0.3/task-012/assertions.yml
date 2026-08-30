@@ -1,0 +1,6 @@
+- type: CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+  value: ZoneOffset.UTC
+- type: NOT_CONTAINS
+  path: src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+  value: ZoneId.systemDefault()

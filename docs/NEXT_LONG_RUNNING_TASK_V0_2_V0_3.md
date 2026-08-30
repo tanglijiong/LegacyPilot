@@ -76,6 +76,8 @@ LegacyPilot 的核心价值是可治理、可恢复、可评测的 Java Agent Ha
 
 ### Issue 35 — 核心任务包 A（task-006–015）
 
+**实施状态（2026-08-30）：** 已完成。`v0.3-draft.2` 新增 order service 与 job scheduler 两个 fixture，以及 task-006–015 的参考修复、公开断言、隐藏行为测试、修改范围和单任务预算；三 fixture 基线、逐题初始失败检查、范围完整性和 15/15 reference ceiling 均通过。
+
 构建首批 10 个任务，用于先验证 schema 与 runner，不立刻扩到 30 个。
 
 建议覆盖：

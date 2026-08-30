@@ -1,0 +1,27 @@
+id: task-008
+category: api-contract
+difficulty: medium
+changeType: error-handling
+expectedImpact: multi-file
+requirement: Map missing orders to an HTTP-style 404 response with the stable error code ORDER_NOT_FOUND.
+fixtureId: order-service-fixture-v1
+allowedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderController.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderNotFoundException.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+forbiddenFiles:
+  - pom.xml
+  - src/test/java/io/legacypilot/fixtures/orders/OrderServiceTest.java
+expectedFiles:
+  - src/main/java/io/legacypilot/fixtures/orders/OrderController.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderNotFoundException.java
+  - src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+relevantSymbols:
+  - io.legacypilot.fixtures.orders.OrderController#get
+  - io.legacypilot.fixtures.orders.OrderService#get
+maximumSteps: 12
+timeoutSeconds: 150
+resourceBudget:
+  maximumTokens: 32000
+  maximumMemoryMb: 2048
+  maximumCostCents: 350
