@@ -1,6 +1,7 @@
 package io.legacypilot.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.legacypilot.eval.AirGappedContainerConfig;
 import io.legacypilot.eval.AirGappedContainerModelAdapter;
 import io.legacypilot.eval.CodexCliModelAdapter;
 import io.legacypilot.eval.EvalDatasetLoader;
@@ -25,6 +26,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
@@ -116,6 +118,36 @@ public class EvalModelRunCommand implements Callable<Integer> {
   @Option(names = "--docker-executable", defaultValue = "docker")
   private String dockerExecutable;
 
+  @Option(names = "--model-weights")
+  private Path modelWeights;
+
+  @Option(names = "--model-socket-directory")
+  private Path modelSocketDirectory;
+
+  @Option(names = "--model-artifact-sha256")
+  private String modelArtifactSha256;
+
+  @Option(names = "--agent-memory", defaultValue = "24g")
+  private String agentMemory;
+
+  @Option(names = "--agent-cpus", defaultValue = "8")
+  private int agentCpus;
+
+  @Option(names = "--agent-pids", defaultValue = "1024")
+  private int agentPids;
+
+  @Option(names = "--agent-gpus", defaultValue = "none")
+  private String agentGpus;
+
+  @Option(names = "--tensor-parallel-size", defaultValue = "1")
+  private int tensorParallelSize;
+
+  @Option(names = "--max-model-length", defaultValue = "32768")
+  private int maxModelLength;
+
+  @Option(names = "--task-ids", split = ",")
+  private List<String> requestedTaskIds = List.of();
+
   @Option(names = "--references", defaultValue = "evals/reference-solutions")
   private Path references;
 
@@ -147,6 +179,7 @@ public class EvalModelRunCommand implements Callable<Integer> {
     var loaded = new EvalDatasetLoader().loadVersioned(dataset);
     var store = new EvalExperimentStore(experimentRoot, mapper);
     EvalExperimentManifest manifest;
+    List<io.legacypilot.eval.EvalTask> tasks;
     String prompt;
     if (resume) {
       manifest = store.manifest();
@@ -161,13 +194,15 @@ public class EvalModelRunCommand implements Callable<Integer> {
       if (!manifest.repositoryCommit().equals(repositoryCommit())) {
         throw new IllegalStateException("repository commit does not match the persisted manifest");
       }
+      tasks = selectTasks(loaded.tasks(), manifest.taskIds());
     } else {
       requireStartOptions();
       requireCleanRepository();
       prompt = readPrompt(promptFile);
       var environment = executionEnvironment();
+      tasks = selectTasks(loaded.tasks(), requestedTaskIds);
       persistPrompt(prompt);
-      manifest = createManifest(loaded, prompt, environment);
+      manifest = createManifest(loaded, prompt, environment, tasks);
     }
     var adapter = createAdapter(manifest);
     var verifier =
@@ -186,9 +221,7 @@ public class EvalModelRunCommand implements Callable<Integer> {
             adapter);
     var runner = new ResumableEvalRunner(Clock.systemUTC(), store);
     var checkpoint =
-        resume
-            ? runner.resume(loaded.tasks(), executor)
-            : runner.start(manifest, loaded.tasks(), executor);
+        resume ? runner.resume(tasks, executor) : runner.start(manifest, tasks, executor);
     output.write(checkpoint);
     return checkpoint.status() == io.legacypilot.eval.EvalExperimentCheckpoint.Status.COMPLETED
         ? 0
@@ -196,7 +229,10 @@ public class EvalModelRunCommand implements Callable<Integer> {
   }
 
   private EvalExperimentManifest createManifest(
-      io.legacypilot.eval.EvalDataset loaded, String prompt, Map<String, String> environment) {
+      io.legacypilot.eval.EvalDataset loaded,
+      String prompt,
+      Map<String, String> environment,
+      List<io.legacypilot.eval.EvalTask> tasks) {
     return new EvalExperimentManifest(
         "eval-experiment-v1",
         runId,
@@ -213,7 +249,7 @@ public class EvalModelRunCommand implements Callable<Integer> {
         environment,
         new EvalExperimentBudget(
             maximumCostUsd, maximumDuration, maximumTokens, maximumProviderErrors, concurrency),
-        loaded.tasks().stream().map(io.legacypilot.eval.EvalTask::id).toList(),
+        tasks.stream().map(io.legacypilot.eval.EvalTask::id).toList(),
         Instant.now());
   }
 
@@ -231,7 +267,12 @@ public class EvalModelRunCommand implements Callable<Integer> {
         || pricingSource == null
         || pricingSource.isBlank()
         || (!modelAdapter.matches("airgap-container|codex"))
-        || (modelAdapter.equals("airgap-container") && (agentImage == null || agentImage.isBlank()))
+        || (modelAdapter.equals("airgap-container")
+            && (agentImage == null
+                || agentImage.isBlank()
+                || modelWeights == null
+                || modelSocketDirectory == null
+                || modelArtifactSha256 == null))
         || (modelAdapter.equals("codex") && !allowExternalProvider)) {
       throw new IllegalArgumentException(
           "new eval runs require model metadata, pricing, and an explicit governed adapter");
@@ -247,6 +288,16 @@ public class EvalModelRunCommand implements Callable<Integer> {
           requiredEnvironment(manifest, "agentCommand"),
           manifest.model(),
           manifest.reasoningEffort(),
+          new AirGappedContainerConfig(
+              Path.of(requiredEnvironment(manifest, "modelWeights")),
+              Path.of(requiredEnvironment(manifest, "modelSocketDirectory")),
+              requiredEnvironment(manifest, "modelArtifactSha256"),
+              requiredEnvironment(manifest, "agentMemory"),
+              integerEnvironment(manifest, "agentCpus"),
+              integerEnvironment(manifest, "agentPids"),
+              requiredEnvironment(manifest, "agentGpus"),
+              integerEnvironment(manifest, "tensorParallelSize"),
+              integerEnvironment(manifest, "maxModelLength")),
           mapper);
     }
     if ("codex".equals(adapter)) {
@@ -274,6 +325,26 @@ public class EvalModelRunCommand implements Callable<Integer> {
       values.put("networkBoundary", "air-gapped");
       values.put("agentImage", agentImage);
       values.put("agentCommand", agentCommand);
+      var config =
+          new AirGappedContainerConfig(
+              modelWeights,
+              modelSocketDirectory,
+              modelArtifactSha256,
+              agentMemory,
+              agentCpus,
+              agentPids,
+              agentGpus,
+              tensorParallelSize,
+              maxModelLength);
+      values.put("modelWeights", config.modelWeights().toString());
+      values.put("modelSocketDirectory", config.modelSocketDirectory().toString());
+      values.put("modelArtifactSha256", config.modelArtifactSha256());
+      values.put("agentMemory", config.memory());
+      values.put("agentCpus", Integer.toString(config.cpus()));
+      values.put("agentPids", Integer.toString(config.pids()));
+      values.put("agentGpus", config.gpuDevices());
+      values.put("tensorParallelSize", Integer.toString(config.tensorParallelSize()));
+      values.put("maxModelLength", Integer.toString(config.maxModelLength()));
       values.put("docker", commandOutput(resolveExecutable(dockerExecutable), "--version"));
     } else if (modelAdapter.equals("codex")) {
       values.put("networkBoundary", "external-provider-explicit");
@@ -290,6 +361,31 @@ public class EvalModelRunCommand implements Callable<Integer> {
       throw new IllegalStateException("persisted eval adapter configuration is incomplete");
     }
     return value;
+  }
+
+  private static int integerEnvironment(EvalExperimentManifest manifest, String key) {
+    try {
+      return Integer.parseInt(requiredEnvironment(manifest, key));
+    } catch (NumberFormatException exception) {
+      throw new IllegalStateException("persisted eval adapter resource is invalid", exception);
+    }
+  }
+
+  private static List<io.legacypilot.eval.EvalTask> selectTasks(
+      List<io.legacypilot.eval.EvalTask> available, List<String> requested) {
+    if (requested == null || requested.isEmpty()) {
+      return List.copyOf(available);
+    }
+    var byId =
+        available.stream()
+            .collect(
+                java.util.stream.Collectors.toMap(
+                    io.legacypilot.eval.EvalTask::id, java.util.function.Function.identity()));
+    if (requested.stream().distinct().count() != requested.size()
+        || !byId.keySet().containsAll(requested)) {
+      throw new IllegalArgumentException("requested eval tasks are invalid");
+    }
+    return requested.stream().map(byId::get).toList();
   }
 
   private void persistPrompt(String prompt) {

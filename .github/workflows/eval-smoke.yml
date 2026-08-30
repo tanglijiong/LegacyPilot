@@ -24,6 +24,11 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Verify offline DeepSeek agent package
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: python3 -m unittest discover -s deploy/deepseek -p 'test_*.py' -v
+
       - name: Run deterministic smoke checks
         run: ./mvnw --batch-mode --no-transfer-progress verify
 

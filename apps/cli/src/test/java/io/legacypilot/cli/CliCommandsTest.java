@@ -353,6 +353,26 @@ class CliCommandsTest {
     assertTrue(maven.toFile().setExecutable(true));
     var prompt = temporary.resolve("airgap-prompt.md");
     Files.writeString(prompt, "Implement inside the bank boundary: {{requirement}}\n");
+    var weights = temporary.resolve("deepseek-weights");
+    Files.createDirectories(weights);
+    var socket = temporary.resolve("deepseek-socket");
+    Files.createDirectories(socket);
+    Files.writeString(
+        socket.resolve("service-manifest.json"),
+        """
+        {
+          "image": "registry.bank.local/model-agent@sha256:%s",
+          "model": "bank-code-model",
+          "modelArtifactSha256": "%s",
+          "memory": "24g",
+          "cpus": 8,
+          "pids": 1024,
+          "gpus": "all",
+          "tensorParallelSize": 1,
+          "maxModelLength": 32768
+        }
+        """
+            .formatted("a".repeat(64), "b".repeat(64)));
     var experiment = temporary.resolve("airgap-run");
     var mapper = new ObjectMapper().findAndRegisterModules();
     var commit = "0123456789abcdef0123456789abcdef01234567";
@@ -372,6 +392,16 @@ class CliCommandsTest {
                         "airgap-run",
                         "--agent-image",
                         "registry.bank.local/model-agent@sha256:" + "a".repeat(64),
+                        "--model-weights",
+                        weights.toString(),
+                        "--model-socket-directory",
+                        socket.toString(),
+                        "--model-artifact-sha256",
+                        "b".repeat(64),
+                        "--agent-gpus",
+                        "all",
+                        "--task-ids",
+                        "task-001,task-002,task-003,task-004,task-005",
                         "--model",
                         "bank-code-model",
                         "--prompt-file",
@@ -396,10 +426,12 @@ class CliCommandsTest {
                         "2"));
 
     assertEquals(0, started.exitCode());
-    assertEquals(20, Files.readAllLines(calls).size());
+    assertEquals(5, Files.readAllLines(calls).size());
     var manifest = mapper.readTree(experiment.resolve("manifest.json").toFile());
     assertEquals("airgap-container", manifest.path("environment").path("modelAdapter").asText());
     assertEquals("air-gapped", manifest.path("environment").path("networkBoundary").asText());
+    assertEquals("all", manifest.path("environment").path("agentGpus").asText());
+    assertEquals(5, manifest.path("taskIds").size());
     assertTrue(Files.readString(calls).contains("--pull never --network none"));
 
     var resumed =
@@ -421,7 +453,7 @@ class CliCommandsTest {
                         "--maven-wrapper",
                         maven.toString()));
     assertEquals(0, resumed.exitCode());
-    assertEquals(20, Files.readAllLines(calls).size());
+    assertEquals(5, Files.readAllLines(calls).size());
   }
 
   @Test

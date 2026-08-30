@@ -11,9 +11,9 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 
 ## 可恢复的内网模型实验
 
-Runner 核心只依赖通用 `EvalModelAdapter`，不依赖模型厂商。默认适配器是固定镜像摘要的本地模型容器：镜像必须已由银行内部镜像仓库预置，启动时使用 `--pull never`、`--network none`、只读根文件系统、无 Linux capabilities 和 `no-new-privileges`。因此模型运行期间没有外网或内网连接，模型权重和 Agent 必须全部包含在批准镜像中。
+Runner 核心只依赖通用 `EvalModelAdapter`，不依赖模型厂商。默认适配器使用两个均为 `--network none` 的本地容器：持久化 vLLM 服务只读挂载模型权重并监听 Unix-domain socket；每个任务的短生命周期 Agent 只挂载该 socket 和隔离 workspace。模型只加载一次，两个容器均不能访问内外网。
 
-镜像内 Agent 从标准输入读取 Prompt，在 `/workspace` 修改代码并输出 JSONL；入口接收 `--workspace`、`--model`、`--reasoning-effort` 和 `--jsonl`。新实验必须显式提供模型、Prompt、固定镜像及价格快照；私有化模型没有按 Token 费用时价格可以记录为 `0`，另行统计基础设施成本。
+镜像必须由银行内部镜像仓库预置并固定摘要。Agent 从标准输入读取 Prompt，在 `/workspace` 修改代码并输出 JSONL；新实验必须显式提供模型、Prompt、权重目录、权重审批摘要、socket 目录和价格快照。启动器会在模型健康后写入服务 manifest，Runner 必须逐项核对镜像、模型摘要和资源配置。私有化模型没有按 Token 费用时价格可以记录为 `0`，另行统计 GPU 基础设施成本。DeepSeek 镜像构建和持久化服务启动见 [`deploy/deepseek`](../deploy/deepseek/README.md)。
 
 ```bash
 ./mvnw -q -pl apps/cli -am package -DskipTests
@@ -23,7 +23,12 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --model-adapter airgap-container \
   --agent-image registry.bank.local/legacy-pilot/model-agent@sha256:<64-hex-digest> \
   --agent-command /opt/legacy-pilot/model-agent \
-  --model <model> \
+  --model-weights /srv/legacy-pilot/models/deepseek-coder-v2-lite \
+  --model-socket-directory /run/legacy-pilot/deepseek \
+  --model-artifact-sha256 <64-hex-weights-digest> \
+  --agent-memory 24g --agent-cpus 8 --agent-pids 1024 \
+  --agent-gpus all --tensor-parallel-size 1 --max-model-length 32768 \
+  --model deepseek-coder-v2-lite \
   --reasoning-effort high \
   --prompt-file evals/prompts/baseline-prompt-v2.md \
   --prompt-version baseline-prompt-v2 \
@@ -36,8 +41,11 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --maximum-tokens 2000000 \
   --maximum-duration PT4H \
   --maximum-provider-errors 3 \
-  --concurrency 2
+  --concurrency 1 \
+  --task-ids task-001,task-002,task-003,task-004,task-005
 ```
+
+首轮固定为上述 5-task smoke，目标至少 4/5。通过后创建新的 run-id，移除 `--task-ids` 运行完整 20-task；不能把 smoke checkpoint 扩展成 full run，因为任务集合属于不可变 manifest。
 
 恢复时只需指定相同 dataset 和实验目录；适配器、固定镜像、网络边界和 Agent 入口来自不可变 manifest，不能在恢复时切换：
 

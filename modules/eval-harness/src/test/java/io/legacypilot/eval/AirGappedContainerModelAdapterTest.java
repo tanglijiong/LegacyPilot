@@ -24,13 +24,20 @@ class AirGappedContainerModelAdapterTest {
     assertTrue(docker.toFile().setExecutable(true));
     var workspace = directory.resolve("workspace");
     Files.createDirectories(workspace);
+    var config = config();
 
     var adapter =
         new AirGappedContainerModelAdapter(
-            docker, IMAGE, "/opt/bank/model-agent", "bank-code-model", "high", new ObjectMapper());
+            docker,
+            IMAGE,
+            "/opt/bank/model-agent",
+            "bank-code-model",
+            "high",
+            config,
+            new ObjectMapper());
     var command =
         AirGappedContainerModelAdapter.command(
-            docker, IMAGE, "/opt/bank/model-agent", "bank-code-model", "high", workspace);
+            docker, IMAGE, "/opt/bank/model-agent", "bank-code-model", "high", config, workspace);
 
     assertEquals(NetworkBoundary.AIR_GAPPED, adapter.networkBoundary());
     assertEquals("airgap-container", adapter.adapterId());
@@ -41,6 +48,12 @@ class AirGappedContainerModelAdapterTest {
     assertTrue(command.contains("no-new-privileges"));
     assertEquals("1000:1000", command.get(command.indexOf("--user") + 1));
     assertTrue(command.contains(IMAGE));
+    assertTrue(command.contains("/models/model"));
+    assertFalse(command.contains("--gpus"));
+    assertTrue(
+        command.stream()
+            .anyMatch(
+                value -> value.contains("/run/legacy-pilot-model") && value.endsWith(",readonly")));
     assertFalse(command.stream().anyMatch(value -> value.contains("api.openai.com")));
   }
 
@@ -59,6 +72,7 @@ class AirGappedContainerModelAdapterTest {
                 "/opt/bank/model-agent",
                 "bank-code-model",
                 "high",
+                config(),
                 new ObjectMapper()));
     assertThrows(
         IllegalArgumentException.class,
@@ -69,6 +83,31 @@ class AirGappedContainerModelAdapterTest {
                 "/bin/sh -c curl evil.example",
                 "bank-code-model",
                 "high",
+                config(),
+                new ObjectMapper()));
+  }
+
+  @Test
+  void rejectsAModelServiceWithDifferentApprovedResources() throws Exception {
+    var docker = directory.resolve("docker");
+    Files.writeString(docker, "#!/bin/sh\nexit 0\n");
+    assertTrue(docker.toFile().setExecutable(true));
+    var config = config();
+    Files.writeString(
+        config.modelSocketDirectory().resolve("service-manifest.json"),
+        Files.readString(config.modelSocketDirectory().resolve("service-manifest.json"))
+            .replace("\"cpus\": 8", "\"cpus\": 16"));
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new AirGappedContainerModelAdapter(
+                docker,
+                IMAGE,
+                "/opt/bank/model-agent",
+                "bank-code-model",
+                "high",
+                config,
                 new ObjectMapper()));
   }
 
@@ -87,5 +126,30 @@ class AirGappedContainerModelAdapterTest {
     assertFalse(environment.containsKey("HTTPS_PROXY"));
     assertEquals("retained", environment.get("SAFE_SETTING"));
     assertEquals("*", environment.get("NO_PROXY"));
+  }
+
+  private AirGappedContainerConfig config() throws Exception {
+    var weights = directory.resolve("weights");
+    Files.createDirectories(weights);
+    var socket = directory.resolve("socket");
+    Files.createDirectories(socket);
+    Files.writeString(
+        socket.resolve("service-manifest.json"),
+        """
+        {
+          "image": "%s",
+          "model": "bank-code-model",
+          "modelArtifactSha256": "%s",
+          "memory": "24g",
+          "cpus": 8,
+          "pids": 1024,
+          "gpus": "all",
+          "tensorParallelSize": 1,
+          "maxModelLength": 32768
+        }
+        """
+            .formatted(IMAGE, "b".repeat(64)));
+    return new AirGappedContainerConfig(
+        weights, socket, "b".repeat(64), "24g", 8, 1024, "all", 1, 32_768);
   }
 }

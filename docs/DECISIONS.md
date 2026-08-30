@@ -145,9 +145,9 @@
 ## ADR-021：银行 Eval 默认使用固定镜像的零网络模型适配器
 
 - **状态：** Accepted
-- **决策：** Eval Runner 核心只依赖通用模型适配器；银行默认路径在固定 SHA-256 镜像中运行本地模型 Agent，并强制 `--pull never` 与 `--network none`。外部 Codex 适配器仅供公开合成数据基准，必须逐次显式授权。
+- **决策：** Eval Runner 核心只依赖通用模型适配器；银行默认路径由持久化本地模型服务和短生命周期 Agent 组成，两者通过 Unix-domain socket 通信，并强制固定镜像、`--pull never` 与 `--network none`。外部 Codex 适配器仅供公开合成数据基准，必须逐次显式授权。
 - **原因：** 银行源代码、Prompt 和运行证据不能离开受控内网；仅校验 URL 或清除代理变量不能构成可靠的零外网边界。
-- **后果：** 模型权重和 Agent 必须预装进内部批准镜像；适配器、镜像摘要与网络边界写入不可变实验 manifest。生产环境还必须由宿主防火墙或 NetworkPolicy 独立拒绝 egress。
+- **后果：** 模型权重从审批目录只读挂载，模型只加载一次；任务 Agent 只能看到 socket 和自己的 workspace。适配器、镜像摘要、权重摘要、资源限制与网络边界写入不可变实验 manifest。生产环境还必须由宿主防火墙或 NetworkPolicy 独立拒绝 egress。
 
 ## ADR-022：密钥扫描覆盖完整 Git 历史
 
