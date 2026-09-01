@@ -192,6 +192,7 @@ def source_context(workspace: Path) -> str:
 def completion(
     prompt: str,
     context: str,
+    plan: str,
     served_name: str,
     allowed_files: list[str],
     required_files: list[str],
@@ -236,6 +237,7 @@ def completion(
                     f"{prompt}\n\nALLOWED PRODUCTION FILES:\n{allowed}"
                     f"\n\nREQUIRED CHANGED OR CREATED FILES:\n{required}"
                     f"\n\nPUBLIC ACCEPTANCE CHECKS:\n{checks}"
+                    f"\n\nIMPLEMENTATION PLAN:\n{plan}"
                     f"\n\nWORKSPACE SOURCE:\n{context}"
                     f"\n\nFINAL NON-NEGOTIABLE CHECKLIST:\n{checks}"
                     f"\nEvery required file must be returned with complete content.{feedback}"
@@ -249,13 +251,56 @@ def completion(
     ))
 
 
-def response_object(response: dict) -> dict:
+def planning_completion(
+    prompt: str,
+    context: str,
+    served_name: str,
+    allowed_files: list[str],
+    required_files: list[str],
+    acceptance: list[str],
+) -> dict:
+    payload = {
+        "model": served_name,
+        "temperature": 0.1,
+        "max_tokens": 2048,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "Analyze a Java 21 maintenance task before coding. Produce a concise plan that "
+                    "preserves existing APIs, identifies exact method signatures and imports, maps "
+                    "every acceptance check to executable code, and anticipates null, boundary, "
+                    "concurrency, time, and idempotency cases. Do not return code or JSON."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"{prompt}\n\nALLOWED FILES:\n" + "\n".join(allowed_files)
+                    + "\n\nREQUIRED FILES:\n" + "\n".join(required_files)
+                    + "\n\nPUBLIC CHECKS:\n" + "\n".join(acceptance)
+                    + f"\n\nREAD-ONLY WORKSPACE:\n{context}"
+                ),
+            },
+        ],
+    }
+    return local_request("/v1/chat/completions", payload, timeout=trusted_integer(
+        "LEGACY_PILOT_INFERENCE_SECONDS", 600, 30, 1800
+    ))
+
+
+def response_text(response: dict) -> str:
     choices = response.get("choices")
     if not isinstance(choices, list) or not choices:
         raise ValueError("model response has no choices")
     content = choices[0].get("message", {}).get("content")
     if not isinstance(content, str):
         raise ValueError("model response has no textual content")
+    return content
+
+
+def response_object(response: dict) -> dict:
+    content = response_text(response)
     start, end = content.find("{"), content.rfind("}")
     if start < 0 or end <= start:
         raise ValueError("model response does not contain a JSON object")
@@ -409,12 +454,27 @@ def main() -> int:
             process, log_path = start_server(Path(args.model).resolve(), args.served_model_name)
             wait_until_ready(process, log_path)
         usage = {"input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
+        context = source_context(workspace)
+        try:
+            plan_response = planning_completion(
+                prompt,
+                context,
+                args.served_model_name,
+                args.allowed_file,
+                args.required_file,
+                args.acceptance,
+            )
+            add_usage(usage, plan_response)
+            plan = response_text(plan_response)
+        except (ValueError, OSError, urllib.error.URLError) as error:
+            plan = f"No separate planning response was available; implement directly ({error})."
         feedback = ""
         for attempt in range(2):
             try:
                 response = completion(
                     prompt,
                     source_context(workspace),
+                    plan,
                     args.served_model_name,
                     args.allowed_file,
                     args.required_file,
