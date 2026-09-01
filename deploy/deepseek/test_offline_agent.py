@@ -107,6 +107,13 @@ class OfflineAgentTest(unittest.TestCase):
                 )
             with self.assertRaises(ValueError):
                 model_agent.apply_files(
+                    workspace,
+                    payload,
+                    ["src/main/java/example/Value.java", "src/main/java/example/Required.java"],
+                    ["src/main/java/example/Value.java", "src/main/java/example/Required.java"],
+                )
+            with self.assertRaises(ValueError):
+                model_agent.apply_files(
                     workspace, {"files": [{"path": "pom.xml", "content": "unsafe"}]}
                 )
             (workspace / "src/main/java/escape").symlink_to(workspace / "pom.xml")

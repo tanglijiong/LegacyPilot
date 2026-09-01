@@ -162,19 +162,28 @@ def wait_until_ready(process: subprocess.Popen[bytes], log_path: Path) -> None:
 def source_context(workspace: Path) -> str:
     retained: list[str] = []
     total = 0
-    for root in (workspace / "src/main/java", workspace / "src/main/resources"):
+    candidates: list[Path] = []
+    pom = workspace / "pom.xml"
+    if pom.is_file() and not pom.is_symlink():
+        candidates.append(pom)
+    for root in (
+        workspace / "src/main/java",
+        workspace / "src/main/resources",
+        workspace / "src/test/java",
+    ):
         if not root.is_dir():
             continue
         for path in sorted(root.rglob("*")):
-            if not path.is_file() or path.is_symlink():
-                continue
-            size = path.stat().st_size
-            if size > MAX_FILE_BYTES or total + size > MAX_CONTEXT_BYTES:
-                continue
-            relative = path.relative_to(workspace).as_posix()
-            content = path.read_text("utf-8", errors="replace")
-            retained.append(f"\n--- {relative} ---\n{content}")
-            total += len(content.encode("utf-8"))
+            if path.is_file() and not path.is_symlink():
+                candidates.append(path)
+    for path in candidates:
+        size = path.stat().st_size
+        if size > MAX_FILE_BYTES or total + size > MAX_CONTEXT_BYTES:
+            continue
+        relative = path.relative_to(workspace).as_posix()
+        content = path.read_text("utf-8", errors="replace")
+        retained.append(f"\n--- READ-ONLY CONTEXT: {relative} ---\n{content}")
+        total += len(content.encode("utf-8"))
     if not retained:
         raise ValueError("workspace contains no readable production source")
     return "".join(retained)
@@ -271,7 +280,12 @@ def safe_target(workspace: Path, raw: str) -> Path:
     return target
 
 
-def apply_files(workspace: Path, payload: dict, allowed_files: list[str] | None = None) -> int:
+def apply_files(
+    workspace: Path,
+    payload: dict,
+    allowed_files: list[str] | None = None,
+    required_files: list[str] | None = None,
+) -> int:
     files = payload.get("files")
     if not isinstance(files, list) or not files or len(files) > MAX_CHANGED_FILES:
         raise ValueError("model patch file count is invalid")
@@ -293,6 +307,11 @@ def apply_files(workspace: Path, payload: dict, allowed_files: list[str] | None 
         if total > MAX_CHANGED_BYTES:
             raise ValueError("model patch exceeds the byte budget")
         prepared.append((target, content))
+    missing = set(required_files or []) - {
+        target.relative_to(workspace).as_posix() for target, _ in prepared
+    }
+    if missing:
+        raise ValueError("model omitted required files: " + ", ".join(sorted(missing)))
     for target, content in prepared:
         target.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary = tempfile.mkstemp(prefix=".model-agent-", dir=target.parent)
@@ -400,7 +419,12 @@ def main() -> int:
                     feedback,
                 )
                 add_usage(usage, response)
-                apply_files(workspace, response_object(response), args.allowed_file)
+                apply_files(
+                    workspace,
+                    response_object(response),
+                    args.allowed_file,
+                    args.required_file,
+                )
                 failures = public_failures(workspace, args.acceptance) + build_failures(workspace)
             except (
                 ValueError,
