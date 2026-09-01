@@ -1,8 +1,13 @@
 # LegacyPilot 银行内网 PoC 交付计划与状态台账
 
 **目标版本：** `v0.3.0-bank-poc`
-**状态：** In progress
+**状态：** Scope frozen — target-environment validation pending
 **最后更新：** 2026-09-01
+**冻结分支：** `codex/v0.3-bank-poc-release`
+**工程实现基线：** `26465f85a5f80a79f0f21ab145678ddbbafd85ed`
+**部署与验收基线：** `04f774d9f4db0f1f3658502cc4677cc85c3a2506`
+
+在阶段 4 和阶段 7 的真实环境门禁以及四方签署全部通过前，不创建正式版本标签、不发布候选物，也不把本机镜像或 reference ceiling 记作银行验收证据。后续代码变更必须重新执行完整证据构建并更新上述基线。
 
 ## 1. 完成定义
 

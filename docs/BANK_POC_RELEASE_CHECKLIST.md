@@ -6,6 +6,15 @@
 
 本检查表区分“解决方案已实现”和“目标环境已验证”。没有真实环境证据的条目保持阻塞，不以模拟结果替代。
 
+## 候选追溯基线
+
+- 冻结分支：`codex/v0.3-bank-poc-release`
+- 工程实现提交：`26465f85a5f80a79f0f21ab145678ddbbafd85ed`
+- 部署与验收提交：`04f774d9f4db0f1f3658502cc4677cc85c3a2506`
+- 本机复验镜像：Maven `sha256:8f6ac126f7810bb5549c4cd122d2bf0e9cda5bdeb0838aa928f09e779fd8bef8`；PostgreSQL `sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416`。二者仅用于本机复验，尚未取得银行批准。
+- 本机证据摘要：`SHA256SUMS` `cf20ea7db20b7bd694839d76b846ad936a35dacce86bab8cd6068c4581022c40`；`bom.json` `c4994f843286027608ec40b123a37efa8e53d3eb93fb7e09ede10b2e564496d3`；`THIRD-PARTY.txt` `138710e9da844b9c55757cf75a564c3dbaf4145a7354ff34c9f316ff91e82796`；`maven-dependencies.txt` `2fcdc93f68ced4550f666c1b43ee4f50bfae5d52ea9717f2b3a467a9eb25e4dd`。
+- 发布纪律：阶段 4、阶段 7 和四方签署完成前，不创建正式标签或对外发布。
+
 ## 已通过
 
 - [x] 统一 run 执行闭环由服务端完成索引、规划、受控执行、审批恢复、验证和报告。
