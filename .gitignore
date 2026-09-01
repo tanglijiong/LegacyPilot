@@ -1,6 +1,8 @@
 # Build output
 target/
 **/target/
+__pycache__/
+*.py[cod]
 
 # IDE
 .idea/

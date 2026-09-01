@@ -60,7 +60,7 @@ output_directory=$(cd "$output_directory" && pwd)
 cp target/bom.json "$output_directory/bom.json"
 cp target/generated-sources/license/THIRD-PARTY.txt "$output_directory/THIRD-PARTY.txt"
 {
-  git ls-files -z -- .mvn apps deploy docs evals modules samples README.md pom.xml mvnw
+  git ls-files -z
   find apps modules -path '*/target/*.jar' -type f -print0
 } | sort -zu \
   | xargs -0 shasum -a 256 > "$output_directory/SHA256SUMS"
