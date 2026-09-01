@@ -17,7 +17,7 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 
 开发验证可以使用上述命令。候选证据生成必须先设置已批准且完整 digest 固定的 `LEGACY_PILOT_MAVEN_IMAGE` 和 `LEGACY_PILOT_POSTGRES_TEST_IMAGE`，确认镜像已导入离线 Docker 存储，再运行 `deploy/bank-poc/build-evidence.sh`；脚本对缺失、非 digest 或本地不存在的镜像失败关闭，并在不启动额外 Ryuk 镜像的情况下运行全量验证。
 
-要求：全量构建和静态检查通过；两项 Maven sandbox 与一项 PostgreSQL 真实 Docker 集成测试不得跳过；DeepSeek 契约测试通过；reference ceiling 为 20/20。Reference ceiling 只验证数据集，不能替代真实模型基线。
+要求：全量构建和静态检查通过；两项 Maven sandbox 与一项 PostgreSQL 真实 Docker 集成测试不得跳过；DeepSeek 契约测试通过；reference ceiling 为 20/20。Reference ceiling 只验证数据集，不能替代真实模型基线。证据摘要必须覆盖全部受版本控制的应用、部署、文档、评测和构建配置，以及最终构建的 JAR，而不只覆盖少数文件扩展名。
 
 `build-evidence.sh` 会检查两份必需的集成测试报告；测试未执行、失败、报错或跳过时均退出 2。普通开发构建在 Docker 不可用时允许跳过这些环境测试，不能用该结果替代候选证据。
 

@@ -31,11 +31,11 @@ No example file in this directory contains a working credential.
 1. Mirror and scan every image and Maven artifact in a connected staging zone.
 2. Generate `bom.json`, artifact checksums and third-party notices in the release pipeline.
 3. Transfer the signed bundle through the bank's approved media process.
-4. Run `preflight.sh` on the dedicated host.
+4. Install `application-bank.yml`, `policy-bank.yml` and the systemd unit using bank-owned paths.
 5. Start PostgreSQL using `postgres.compose.yml`, bound to loopback by default.
-6. Install `application-bank.yml`, `policy-bank.yml` and the systemd unit using bank-owned paths.
-7. Start the approved vLLM service through `../deepseek/start_model_service.py`.
-8. Set `LEGACY_PILOT_MODEL_SOCKET` to the approved socket and start the Server.
+6. Start the approved vLLM service through `../deepseek/start_model_service.py`.
+7. Set `LEGACY_PILOT_MODEL_SOCKET` to the approved socket and run `preflight.sh` on the dedicated host. The preflight fails unless all three runtime images are digest-pinned and present offline, the model weights are read-only with a matching approved digest marker, and the PostgreSQL secret is a regular non-symlink file.
+8. Start the Server.
 9. Run the five-task smoke acceptance before importing any internal repository.
 
 ## Fail-closed defaults

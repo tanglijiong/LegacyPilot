@@ -59,6 +59,8 @@ output_directory=$(cd "$output_directory" && pwd)
 ./mvnw --batch-mode --no-transfer-progress dependency:tree > "$output_directory/maven-dependencies.txt"
 cp target/bom.json "$output_directory/bom.json"
 cp target/generated-sources/license/THIRD-PARTY.txt "$output_directory/THIRD-PARTY.txt"
-find apps modules deploy -type f \( -name '*.jar' -o -name 'Dockerfile' -o -name '*.py' -o -name '*.yml' \) -print0 \
-  | sort -z \
+{
+  git ls-files -z -- .mvn apps deploy docs evals modules samples README.md pom.xml mvnw
+  find apps modules -path '*/target/*.jar' -type f -print0
+} | sort -zu \
   | xargs -0 shasum -a 256 > "$output_directory/SHA256SUMS"

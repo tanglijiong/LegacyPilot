@@ -35,6 +35,7 @@
 - [x] `v0.3-core.1` reference ceiling 20/20 通过；该结果仅证明数据集可解。
 - [x] CycloneDX 1.6 SBOM（123 个组件）、Maven 依赖树、SHA-256 清单和第三方许可清单可离线生成；银行证据脚本要求 Maven/PostgreSQL 测试镜像均使用已批准完整 digest 且已存在于离线镜像库。
 - [x] `build-evidence.sh` 已验证失败关闭和本机完整 digest 正向路径，可从干净构建生成四类非空证据文件；本机镜像未标记为银行批准。
+- [x] 主机预检对 Maven、PostgreSQL、DeepSeek Agent 三类离线镜像执行完整 digest 与本地存在性检查，并校验只读模型权重、批准摘要标记、数据库密码文件和模型 Unix socket；非法摘要或缺失镜像均失败关闭。
 
 ## 环境阻塞项
 
