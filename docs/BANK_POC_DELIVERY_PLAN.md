@@ -7,7 +7,7 @@
 **工程实现基线：** `26465f85a5f80a79f0f21ab145678ddbbafd85ed`
 **部署与验收基线：** `cc96b1e`（包含 `04f774d9f4db0f1f3658502cc4677cc85c3a2506` 的部署包，并加固三类镜像、模型权重和证据范围门禁）
 
-在阶段 4 和阶段 7 的真实环境门禁以及四方签署全部通过前，不创建正式版本标签、不发布候选物，也不把本机镜像或 reference ceiling 记作银行验收证据。后续代码变更必须重新执行完整证据构建并更新上述基线；最终完整源码身份由签名发布标签确定。
+在阶段 4 和阶段 7 的技术门禁通过前，不创建正式版本标签、不发布候选物，也不把 reference ceiling 记作真实模型成绩。该参考方案不要求任何银行人员或外部机构签署；后续代码变更必须重新执行完整证据构建并更新上述基线，最终完整源码身份由签名发布标签确定。
 
 ## 1. 完成定义
 
@@ -47,7 +47,7 @@
 
 当前环境检查：Docker Desktop 28.4.0 已可用，两项真实 Docker 沙箱测试和一项 PostgreSQL 16 应用集成测试均已执行并通过；仍未发现批准的内网 Agent 镜像、`MODEL_ARTIFACT_SHA256` 或本地 DeepSeek 权重，因此不得启动或伪造阶段 4 的实验。主 Agent Runtime 已支持与 Eval 相同的 OpenAI-compatible Unix socket 模型边界，待批准环境就绪后可直接验收。
 
-本机确定性证据（2026-09-01）：完整 Maven reactor 24/24 成功，独立空源码目录复验同样通过；Reactor 内 Java 测试 170 项全部执行，失败 0、错误 0、跳过 0，其中两项 Maven sandbox 和一项 PostgreSQL 16 真实 Docker 集成通过。真实库门禁发现并修复了 PostgreSQL 不支持 `CLOB` 以及缺失 Flyway PostgreSQL 模块的问题，并验证 V1/V2 迁移、项目/任务/run API 与执行发起人记录；同时保留已发布 H2 V1 的原始校验和，并通过从 v0.2 数据库升级到 V2 的回归测试。PostgreSQL 16 参考 Compose 另已以完整镜像 digest 完成健康检查、写入后重启持久化和 `pg_dump` 逻辑恢复校验，烟测资源已清理（本机 digest 不代表银行批准）；DeepSeek 离线契约 4/4；`v0.3-core.1` reference ceiling 20/20；CycloneDX 1.6 SBOM 含 123 个组件。`build-evidence.sh` 缺少 digest 时退出 2，使用本机完整 Maven/PostgreSQL digest 时可从干净构建生成非空 SBOM、第三方许可、依赖树和 SHA-256 清单；本机输出仅验证脚本，不代表机构镜像审批。真实 Bearer JWT 测试已验证 OIDC `roles` claim 和 subject 信任边界；统一执行路径已进入受管理员保护的 OpenAPI 契约，应用与安全错误具有稳定错误码和 correlation ID；示例见 [银行内网 PoC API 契约与操作示例](BANK_POC_API.md)。候选发布状态详见 [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md)。
+本机确定性证据（2026-09-01）：完整 Maven reactor 24/24 成功，独立空源码目录复验同样通过；Reactor 内 Java 测试 170 项全部执行，失败 0、错误 0、跳过 0，其中两项 Maven sandbox 和一项 PostgreSQL 16 真实 Docker 集成通过。真实库门禁发现并修复了 PostgreSQL 不支持 `CLOB` 以及缺失 Flyway PostgreSQL 模块的问题，并验证 V1/V2 迁移、项目/任务/run API 与执行发起人记录；同时保留已发布 H2 V1 的原始校验和，并通过从 v0.2 数据库升级到 V2 的回归测试。PostgreSQL 16 参考 Compose 另已以完整镜像 digest 完成健康检查、写入后重启持久化和 `pg_dump` 逻辑恢复校验，烟测资源已清理；DeepSeek 离线契约 4/4；`v0.3-core.1` reference ceiling 20/20；CycloneDX 1.6 SBOM 含 123 个组件。`build-evidence.sh` 缺少 digest 时退出 2，使用本机完整 Maven/PostgreSQL digest 时可从干净构建生成非空 SBOM、第三方许可、依赖树和 SHA-256 清单。本机输出用于验证参考方案的可复现性。真实 Bearer JWT 测试已验证 OIDC `roles` claim 和 subject 信任边界；统一执行路径已进入受管理员保护的 OpenAPI 契约，应用与安全错误具有稳定错误码和 correlation ID；示例见 [银行内网 PoC API 契约与操作示例](BANK_POC_API.md)。候选发布状态详见 [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md)。
 
 ## 4. 交付物清单
 

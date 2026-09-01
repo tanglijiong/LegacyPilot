@@ -24,8 +24,8 @@
 | [银行内网 PoC API 契约与操作示例](BANK_POC_API.md) | 管理员 OpenAPI、统一执行流程、错误码和关联 ID 契约 |
 | [银行 PoC 安全架构与威胁模型](BANK_POC_SECURITY.md) | 信任边界、数据流、RBAC、端口、威胁控制和残余风险 |
 | [银行 PoC 运维手册](BANK_POC_OPERATIONS.md) | 启停、备份恢复、升级回滚、监控告警和容量基线 |
-| [银行 PoC 验收手册](BANK_POC_ACCEPTANCE.md) | 自动化、安全、功能、模型、运维和签署验收项 |
-| [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md) | 已通过证据、环境阻塞项、解阻输入与最终签署状态 |
+| [银行 PoC 验收手册](BANK_POC_ACCEPTANCE.md) | 自动化、安全、功能、模型、运维和发布证据项 |
+| [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md) | 已通过证据、技术环境阻塞项与解阻输入 |
 | [Quickstart](QUICKSTART.md) | 在新环境构建、运行 Eval、启动 MCP 和排查常见故障 |
 | [MCP Server](MCP_SERVER.md) | STDIO 配置、工具清单和安全边界 |
 | [Eval Harness](EVALS.md) | 五任务数据集、指标和基线解释 |

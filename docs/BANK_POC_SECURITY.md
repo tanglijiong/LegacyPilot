@@ -93,7 +93,7 @@ JWT 使用 `roles` claim，映射为以下角色：
 | Sandbox | 任意网络 | 无 | `network none` + 宿主防火墙拒绝 |
 | Model service | 任意网络 | 无 | `network none` + 宿主防火墙拒绝 |
 
-除了 OIDC/JWK 和数据库，没有应用必需的 IP egress。完全隔离区应在区内镜像 JWK 或采用银行批准的离线 JWT 验证配置。
+除了 OIDC/JWK 和数据库，没有应用必需的 IP egress。完全隔离区应在区内镜像 JWK 或采用经过本地验证的离线 JWT 配置。
 
 ## 7. 审计事件和保留
 
