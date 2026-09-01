@@ -87,6 +87,7 @@ Token / Cost / Duration: recorded
 - [已完成长期任务：Issues 21–26 可恢复 Harness](docs/NEXT_TASK_ISSUES_21_26.md)
 - [已完成长期任务：Issues 27–32 受治理工具链与模型韧性](docs/NEXT_TASK_ISSUES_27_32.md)
 - [下一阶段长期任务：v0.2 收口与证据优先的精简 v0.3](docs/NEXT_LONG_RUNNING_TASK_V0_2_V0_3.md)
+- [银行内网 PoC 交付计划与状态台账](docs/BANK_POC_DELIVERY_PLAN.md)
 - [可恢复 Harness 运维指南](docs/RESILIENT_HARNESS.md)
 - [受治理 Harness 指南](docs/GOVERNED_HARNESS.md)
 - [30 分钟 Quickstart](docs/QUICKSTART.md)
@@ -97,7 +98,9 @@ Token / Cost / Duration: recorded
 
 ## 当前状态
 
-v0.1.0 发布证据已完成：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可运行 Banking Demo、五任务 Eval、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。真实模型五任务基线、无 reference overlay 的公开演示、全新环境 smoke、真实 Docker 测试及远端工作流结果见[发布清单](docs/RELEASE_CHECKLIST_V0.1.md)。
+`v0.2.0` 已正式发布：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。发布证据见 [v0.2 清单](docs/RELEASE_CHECKLIST_V0.2.md)。
+
+当前主线为 `0.3.0-SNAPSHOT`。20 题受治理 Eval、可恢复真实模型 Runner、失败分类、A/B 比较和离线 Dashboard 的工程实现已完成；银行内网 PoC 的统一执行 API、身份与职责分离、本地模型 Unix socket 边界、PostgreSQL 参考部署和运维材料正在收口。真实 DeepSeek 基线和目标环境候选验收仍等待批准的镜像、权重与离线 GPU/容器主机，详见[交付台账](docs/BANK_POC_DELIVERY_PLAN.md)。
 
 ## 本地开发
 
@@ -115,13 +118,15 @@ v0.1.0 发布证据已完成：系统具备 Java 代码智能、受控工具、A
 
 完整构建会执行单元测试、架构边界测试、格式检查、Checkstyle、SpotBugs 和 JaCoCo 覆盖率检查。贡献约定见 [CONTRIBUTING.md](CONTRIBUTING.md)，安全问题请按 [SECURITY.md](SECURITY.md) 私下报告。
 
+普通开发环境未启动 Docker 时，真实 Docker/PostgreSQL 集成测试会明确跳过；其余门禁仍需通过。银行 PoC 候选证据必须使用批准且按 digest 固定的镜像运行 `deploy/bank-poc/build-evidence.sh`，该脚本会在任何必需集成测试缺失、失败或跳过时失败关闭。
+
 ### 运行 REST 服务
 
 ```bash
 ./mvnw -pl apps/server -am spring-boot:run
 ```
 
-启动后可访问 OpenAPI UI：`http://localhost:8080/docs`。生命周期 API 位于 `/api/v1`。
+生命周期 API 位于 `/api/v1`。Server 默认拒绝未认证访问并关闭 OpenAPI UI；仅在受控开发环境显式配置认证并设置 `LEGACY_PILOT_OPENAPI_ENABLED=true` 后开放 `/docs`。银行内网参考配置见 [`deploy/bank-poc`](deploy/bank-poc/README.md)。
 
 ### 运行 CLI
 

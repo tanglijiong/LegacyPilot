@@ -54,6 +54,17 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --output evals/runs/<run-id> --resume
 ```
 
+两个具有相同 dataset digest 和任务集合的完整实验可生成确定性失败分类、回归门禁、JSON、Markdown 与单文件离线 Dashboard：
+
+```bash
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-compare \
+  --baseline evals/runs/<baseline-run> \
+  --candidate evals/runs/<candidate-run> \
+  --output evals/comparisons/<comparison-id>
+```
+
+比较命令要求所有任务都有确定终态；`NEEDS_REVIEW`、缺失结果、不同数据集或不同任务集合均 fail closed。Dashboard 不加载外部 CSS、JavaScript、字体或网络资源。
+
 Runner 在调用前原子写入稳定 attempt checkpoint。已完成任务不会再次调用模型；进程退出时仍为 `RUNNING` 的 attempt 会转为 `NEEDS_REVIEW`，其余待执行任务继续。全局成本、Token、累计耗时、provider error 和并发数均来自不可变 manifest。Prompt 只通过标准输入传递；父进程会移除 credential、token、password、authorization 和 proxy 环境变量。模型完成后才会叠加隐藏测试，reference production code 永远不会进入模型工作区。
 
 ### 显式外部公开基准

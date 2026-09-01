@@ -2,7 +2,7 @@
 
 **覆盖建议 Issues：** 33–40
 **阶段目标：** 先发布可审计的 `v0.2.0`，再用 20 个核心任务（30 个为 stretch）证明策略、模型和检索改动是否真的提升质量
-**状态：** In progress — v0.2 已发布，Issue 34 已完成，Issue 35 task pack A 开始实施
+**状态：** In progress — v0.2 已发布，Issues 34–39 已完成；Issue 40 等待真实离线 DeepSeek 基线和候选发布验收
 **规划日期：** 2026-08-29
 
 ## 1. 为什么这样收敛
@@ -141,6 +141,8 @@ eval dashboard --comparison <comparison.json> --output dashboard.html
 
 ### Issue 38 — 实验矩阵、失败分类与回归门槛
 
+**实施状态（2026-08-31）：** 工程实现完成。每个非成功结果具有确定性 `primaryFailure`；完整实验可执行成对比较，计算 pass@1、成本、Token、p50/p95、逐任务改进/回归，并按既定 4/5 smoke、70% pass@1、最多回归 1 题及 15% 补偿规则执行门禁。真实 A/B 数据仍属于 Issue 40 发布证据。
+
 #### 最小实验矩阵
 
 1. **A：发布基线** — 当前模型 + 当前 Prompt/策略；
@@ -186,6 +188,8 @@ eval dashboard --comparison <comparison.json> --output dashboard.html
 
 ### Issue 39 — 自包含静态 Eval Dashboard
 
+**实施状态（2026-08-31）：** 已完成。`eval-compare` 生成同源 `comparison.json`、`report.md` 和自包含 `dashboard.html`；包含指标卡、失败分类、逐任务对比和离线过滤，执行 HTML 转义且不加载任何网络资源。
+
 Dashboard 是报告视图，不是新的在线产品。
 
 #### 页面内容
@@ -204,6 +208,8 @@ Dashboard 是报告视图，不是新的在线产品。
 - renderer 做快照测试、HTML 转义测试和 20/30 任务布局检查。
 
 ### Issue 40 — 公开基线、决策记录与下一阶段出口
+
+**实施状态（2026-08-31）：** In progress。数据集、可恢复 runner、失败分类、比较器和 Dashboard 已就绪；当前主机缺少经批准的固定镜像、DeepSeek 权重、Docker/GPU 服务，5 题 smoke、20 题 A/B 与最终发布决策等待目标离线环境。
 
 - 冻结 dataset、runner 和 experiment schema 版本；
 - 运行 A/B 全量实验并提交 manifest、逐任务结果、comparison、Markdown 与 Dashboard；

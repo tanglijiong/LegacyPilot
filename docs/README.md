@@ -20,6 +20,12 @@
 | [恢复机制运维指南](RESILIENT_HARNESS.md) | 版本化状态、Journal、Lease、Trace、Memory 与故障恢复 |
 | [受治理 Harness 指南](GOVERNED_HARNESS.md) | Policy、Capability、MCP 写工具、模型路由、Vector/Reranker 和 Docker 依赖治理 |
 | [下一阶段长期任务：v0.2 收口与精简 v0.3](NEXT_LONG_RUNNING_TASK_V0_2_V0_3.md) | 20–30 任务、可恢复模型实验、对比指标、失败分类和静态 Dashboard |
+| [银行内网 PoC 交付计划与状态台账](BANK_POC_DELIVERY_PLAN.md) | 银行内网可交付范围、阶段状态、交付物和最终验收条件 |
+| [银行内网 PoC API 契约与操作示例](BANK_POC_API.md) | 管理员 OpenAPI、统一执行流程、错误码和关联 ID 契约 |
+| [银行 PoC 安全架构与威胁模型](BANK_POC_SECURITY.md) | 信任边界、数据流、RBAC、端口、威胁控制和残余风险 |
+| [银行 PoC 运维手册](BANK_POC_OPERATIONS.md) | 启停、备份恢复、升级回滚、监控告警和容量基线 |
+| [银行 PoC 验收手册](BANK_POC_ACCEPTANCE.md) | 自动化、安全、功能、模型、运维和签署验收项 |
+| [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md) | 已通过证据、环境阻塞项、解阻输入与最终签署状态 |
 | [Quickstart](QUICKSTART.md) | 在新环境构建、运行 Eval、启动 MCP 和排查常见故障 |
 | [MCP Server](MCP_SERVER.md) | STDIO 配置、工具清单和安全边界 |
 | [Eval Harness](EVALS.md) | 五任务数据集、指标和基线解释 |

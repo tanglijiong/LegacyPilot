@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Set a bank-mirrored image pinned by sha256 digest}
+    pull_policy: never
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: legacypilot
+      POSTGRES_USER: ${POSTGRES_USER:?Set through the approved secret delivery process}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  postgres_password:
+    file: ${POSTGRES_PASSWORD_FILE:?Set a root-readable password file outside this repository}
+
+volumes:
+  postgres-data:

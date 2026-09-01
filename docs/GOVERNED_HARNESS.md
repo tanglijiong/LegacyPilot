@@ -81,7 +81,7 @@ Context Engine 提供 Embedding Provider、Vector Store 和 Reranker 端口。�
 
 Maven 容器流程分为：
 
-1. `DEPENDENCY_PREWARM`：由显式受信调用启用网络，缓存以读写方式挂载，执行 `dependency:go-offline` 并解析 Surefire 的动态测试 provider（不运行项目测试）；
+1. `DEPENDENCY_PREWARM`：由显式受信调用启用网络，缓存以读写方式挂载，以不匹配的测试 group 执行 Maven `test` 生命周期；它解析真实编译、测试插件和 Surefire 动态 provider，但不运行项目测试，也不下载无关 Site/Reporting 依赖；瞬时失败最多在同一内容寻址缓存上重试三次；
 2. `EXECUTION`：固定 `--network none`，同一缓存只读挂载，运行 compile/test/static analysis。
 
 `DependencyCacheManager` 根据 `pom.xml`、Maven Wrapper 配置等输入生成 SHA-256 内容地址，拒绝 root 外目录、符号链接和超限缓存。`DockerImagePolicy.digestPinned` 可强制镜像使用 `@sha256:` 引用。容器仍使用只读 rootfs、非 root 用户、drop all capabilities、no-new-privileges、PID/CPU/内存/临时盘限制和显式挂载。

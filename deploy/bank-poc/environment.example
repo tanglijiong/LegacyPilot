@@ -1,0 +1,15 @@
+LEGACY_PILOT_SECURITY_MODE=oidc
+LEGACY_PILOT_SERVER_JAR=/opt/legacypilot/legacy-pilot-server.jar
+LEGACY_PILOT_OIDC_ISSUER=https://identity.bank.example/realms/engineering
+LEGACY_PILOT_DATABASE_URL=jdbc:postgresql://127.0.0.1:5432/legacypilot
+LEGACY_PILOT_DATABASE_USERNAME=provided-by-secret-manager
+LEGACY_PILOT_DATABASE_PASSWORD=provided-by-secret-manager
+LEGACY_PILOT_POLICY_FILE=/etc/legacypilot/policy-bank.yml
+LEGACY_PILOT_WORK_ROOT=/var/lib/legacypilot/work
+LEGACY_PILOT_AGENT_STATE_ROOT=/var/lib/legacypilot/state
+LEGACY_PILOT_MODEL_SOCKET=/run/legacypilot/model/vllm.sock
+LEGACY_PILOT_MODEL=deepseek-coder-v2-lite
+LEGACY_PILOT_MAVEN_IMAGE=registry.bank.example/approved/maven@sha256:<64-hex-digest>
+LEGACY_PILOT_POSTGRES_TEST_IMAGE=registry.bank.example/approved/postgres@sha256:<64-hex-digest>
+LEGACY_PILOT_SANDBOX_DIGEST_REQUIRED=true
+LEGACY_PILOT_OPENAPI_ENABLED=false

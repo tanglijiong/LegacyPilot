@@ -1,0 +1,26 @@
+[Unit]
+Description=LegacyPilot bank-internal PoC server
+After=network.target postgresql.service
+RequiresMountsFor=/var/lib/legacypilot /run/legacypilot/model
+
+[Service]
+Type=simple
+User=legacypilot
+Group=legacypilot
+EnvironmentFile=/etc/legacypilot/server.env
+ExecStart=/usr/bin/java -XX:MaxRAMPercentage=75 -jar /opt/legacypilot/legacy-pilot-server.jar --spring.config.additional-location=file:/etc/legacypilot/application-bank.yml
+WorkingDirectory=/var/lib/legacypilot
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/legacypilot /run/legacypilot/model
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

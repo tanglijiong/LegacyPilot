@@ -1,0 +1,52 @@
+server:
+  address: 127.0.0.1
+  port: 8080
+  forward-headers-strategy: framework
+
+spring:
+  datasource:
+    url: ${LEGACY_PILOT_DATABASE_URL}
+    username: ${LEGACY_PILOT_DATABASE_USERNAME}
+    password: ${LEGACY_PILOT_DATABASE_PASSWORD}
+  flyway:
+    enabled: true
+    locations: classpath:db/postgresql
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${LEGACY_PILOT_OIDC_ISSUER}
+
+springdoc:
+  api-docs:
+    enabled: ${LEGACY_PILOT_OPENAPI_ENABLED:false}
+  swagger-ui:
+    enabled: ${LEGACY_PILOT_OPENAPI_ENABLED:false}
+
+legacy-pilot:
+  security:
+    mode: oidc
+  policy:
+    file: ${LEGACY_PILOT_POLICY_FILE}
+  workspace:
+    root: ${LEGACY_PILOT_WORK_ROOT}
+  agent:
+    state-root: ${LEGACY_PILOT_AGENT_STATE_ROOT}
+    lease-ttl: 2m
+    memory:
+      maximum-entries: 5000
+  model:
+    unix-socket: ${LEGACY_PILOT_MODEL_SOCKET}
+  sandbox:
+    maven-image: ${LEGACY_PILOT_MAVEN_IMAGE}
+    digest-required: true
+  execution:
+    model: ${LEGACY_PILOT_MODEL}
+    context-token-budget: 12000
+    maximum-candidates: 50
+    graph-depth: 2
+    maximum-steps: 20
+    maximum-retries: 2
+    maximum-tokens: 100000
+    maximum-cost-usd: 0
+    maximum-duration: 30m

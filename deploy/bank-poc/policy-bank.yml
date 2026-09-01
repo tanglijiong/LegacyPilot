@@ -1,0 +1,27 @@
+schemaVersion: 1
+revision: bank-poc-default-v1
+rules:
+  - id: deny-external-io
+    effect: DENY
+    risks: [EXTERNAL_IO]
+    reason: external I/O is prohibited in the bank PoC
+  - id: approve-workspace-write
+    effect: REQUIRE_APPROVAL
+    risks: [WORKSPACE_WRITE]
+    reason: every workspace write requires an action-bound approval
+    requiredScope: action
+  - id: approve-command
+    effect: REQUIRE_APPROVAL
+    risks: [COMMAND_EXECUTION]
+    commandExecutionAllowed: false
+    reason: every build command requires approval
+    requiredScope: action
+  - id: allow-approved-command
+    effect: ALLOW
+    risks: [COMMAND_EXECUTION]
+    commandExecutionAllowed: true
+    reason: an approved run may execute registered Maven tools
+  - id: allow-read-only
+    effect: ALLOW
+    risks: [READ_ONLY]
+    reason: bounded worktree reads are allowed
