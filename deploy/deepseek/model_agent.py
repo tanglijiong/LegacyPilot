@@ -46,6 +46,8 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--model", required=True)
     parser.add_argument("--served-model-name", required=True)
     parser.add_argument("--reasoning-effort", required=True)
+    parser.add_argument("--allowed-file", action="append", default=[])
+    parser.add_argument("--acceptance", action="append", default=[])
     parser.add_argument("--jsonl", action="store_true", required=True)
     return parser.parse_args()
 
@@ -175,12 +177,22 @@ def source_context(workspace: Path) -> str:
     return "".join(retained)
 
 
-def completion(prompt: str, context: str, served_name: str) -> dict:
+def completion(
+    prompt: str,
+    context: str,
+    served_name: str,
+    allowed_files: list[str],
+    acceptance: list[str],
+) -> dict:
+    allowed = "\n".join(f"- {path}" for path in allowed_files)
+    checks = "\n".join(f"- {check}" for check in acceptance)
     system = (
         "You are a Java 21 maintenance agent running in a local offline environment. "
         "Return only one JSON object with a files array. Each item must contain path and the "
-        "complete replacement content. Change only production files under src/main/java or "
-        "src/main/resources. Never change tests, pom.xml, build output, or unrelated files."
+        "complete, compilable replacement content including package, imports, and enclosing type. "
+        "Never return a fragment. Change only the explicitly allowed production files. Never "
+        "change tests, pom.xml, build output, or unrelated files. Satisfy every public acceptance "
+        "check exactly, including named constants and error codes. Create every required new file."
     )
     payload = {
         "model": served_name,
@@ -188,7 +200,14 @@ def completion(prompt: str, context: str, served_name: str) -> dict:
         "max_tokens": 8192,
         "messages": [
             {"role": "system", "content": system},
-            {"role": "user", "content": f"{prompt}\n\nWORKSPACE SOURCE:\n{context}"},
+            {
+                "role": "user",
+                "content": (
+                    f"{prompt}\n\nALLOWED PRODUCTION FILES:\n{allowed}"
+                    f"\n\nPUBLIC ACCEPTANCE CHECKS:\n{checks}"
+                    f"\n\nWORKSPACE SOURCE:\n{context}"
+                ),
+            },
         ],
         "response_format": {"type": "json_object"},
     }
@@ -289,7 +308,13 @@ def main() -> int:
         else:
             process, log_path = start_server(Path(args.model).resolve(), args.served_model_name)
             wait_until_ready(process, log_path)
-        response = completion(prompt, source_context(workspace), args.served_model_name)
+        response = completion(
+            prompt,
+            source_context(workspace),
+            args.served_model_name,
+            args.allowed_file,
+            args.acceptance,
+        )
         apply_files(workspace, response_object(response))
         usage = response.get("usage") or {}
         output_tokens = max(0, int(usage.get("completion_tokens", 0)))

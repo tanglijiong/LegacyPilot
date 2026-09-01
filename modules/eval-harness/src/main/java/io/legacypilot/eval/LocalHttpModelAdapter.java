@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,20 +37,49 @@ public final class LocalHttpModelAdapter implements EvalModelAdapter {
             "local-http",
             NetworkBoundary.LOCAL_ONLY,
             (workspace, task) ->
-                List.of(
-                    executable.toString(),
-                    script.toString(),
-                    "--workspace",
-                    workspace.toAbsolutePath().normalize().toString(),
-                    "--model",
-                    model,
-                    "--served-model-name",
-                    model,
-                    "--reasoning-effort",
-                    reasoningEffort,
-                    "--jsonl"),
+                command(executable, script, model, reasoningEffort, workspace, task),
             Map.of("LEGACY_PILOT_MODEL_BASE_URL", endpoint),
             mapper);
+  }
+
+  private static List<String> command(
+      Path executable,
+      Path script,
+      String model,
+      String reasoningEffort,
+      Path workspace,
+      EvalTask task) {
+    var command =
+        new ArrayList<>(
+            List.of(
+                executable.toString(),
+                script.toString(),
+                "--workspace",
+                workspace.toAbsolutePath().normalize().toString(),
+                "--model",
+                model,
+                "--served-model-name",
+                model,
+                "--reasoning-effort",
+                reasoningEffort,
+                "--jsonl"));
+    task.allowedFiles()
+        .forEach(
+            path -> {
+              command.add("--allowed-file");
+              command.add(path);
+            });
+    task.assertions()
+        .forEach(
+            assertion -> {
+              command.add("--acceptance");
+              command.add(
+                  assertion.type()
+                      + " "
+                      + assertion.path()
+                      + (assertion.value().isBlank() ? "" : " => " + assertion.value()));
+            });
+    return List.copyOf(command);
   }
 
   @Override
