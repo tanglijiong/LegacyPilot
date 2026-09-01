@@ -59,7 +59,7 @@ public final class GovernedEvalTaskExecutor implements EvalTaskExecutor {
     if (!workspace.startsWith(workspaceRoot) || Files.exists(workspace)) {
       throw new IllegalStateException("eval task workspace already exists or is invalid");
     }
-    copy(fixture, workspace);
+    copy(fixture, workspace, false);
     var baseline = integrity.capture(workspace);
     var started = System.nanoTime();
     var prompt = promptTemplate.replace("{{requirement}}", task.requirement());
@@ -114,11 +114,11 @@ public final class GovernedEvalTaskExecutor implements EvalTaskExecutor {
   private void overlayHiddenTests(EvalTask task, Path workspace) {
     var tests = referenceSolutions.resolve(task.id()).resolve("src/test");
     if (Files.isDirectory(tests)) {
-      copy(tests, workspace.resolve("src/test"));
+      copy(tests, workspace.resolve("src/test"), true);
     }
   }
 
-  private static void copy(Path source, Path target) {
+  static void copy(Path source, Path target, boolean replaceExisting) {
     try (var paths = Files.walk(source)) {
       for (var path : paths.toList()) {
         if (Files.isSymbolicLink(path)) {
@@ -129,7 +129,15 @@ public final class GovernedEvalTaskExecutor implements EvalTaskExecutor {
           Files.createDirectories(destination);
         } else {
           Files.createDirectories(Objects.requireNonNull(destination.getParent()));
-          Files.copy(path, destination, StandardCopyOption.COPY_ATTRIBUTES);
+          if (replaceExisting) {
+            Files.copy(
+                path,
+                destination,
+                StandardCopyOption.COPY_ATTRIBUTES,
+                StandardCopyOption.REPLACE_EXISTING);
+          } else {
+            Files.copy(path, destination, StandardCopyOption.COPY_ATTRIBUTES);
+          }
         }
       }
     } catch (IOException exception) {

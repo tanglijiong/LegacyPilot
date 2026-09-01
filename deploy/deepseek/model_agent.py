@@ -187,7 +187,19 @@ def completion(
     acceptance: list[str],
 ) -> dict:
     allowed = "\n".join(f"- {path}" for path in allowed_files) or "- production source files only"
-    checks = "\n".join(f"- {check}" for check in acceptance) or "- compile and pass tests"
+    check_lines: list[str] = []
+    for check in acceptance:
+        check_type, _, remainder = check.partition(" ")
+        raw_path, separator, expected = remainder.partition(" => ")
+        if check_type == "CONTAINS" and separator:
+            check_lines.append(
+                f"- REQUIRED EXACT SOURCE TEXT in {raw_path}: {json.dumps(expected)}"
+            )
+        elif check_type == "MATCHES_REGEX" and separator:
+            check_lines.append(f"- REQUIRED SOURCE REGEX in {raw_path}: {expected}")
+        else:
+            check_lines.append(f"- {check}")
+    checks = "\n".join(check_lines) or "- compile and pass tests"
     system = (
         "You are a Java 21 maintenance agent running in a local offline environment. "
         "Return only one JSON object with a files array. Each item must contain path and the "

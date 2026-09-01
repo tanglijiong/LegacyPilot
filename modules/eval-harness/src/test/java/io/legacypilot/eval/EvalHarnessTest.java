@@ -199,6 +199,20 @@ class EvalHarnessTest {
   }
 
   @Test
+  void hiddenTestOverlayReplacesAVisibleTestWithTheSamePath() throws Exception {
+    var source = directory.resolve("hidden-tests");
+    var target = directory.resolve("workspace-tests");
+    Files.createDirectories(source.resolve("java/example"));
+    Files.createDirectories(target.resolve("java/example"));
+    Files.writeString(source.resolve("java/example/ServiceTest.java"), "hidden");
+    Files.writeString(target.resolve("java/example/ServiceTest.java"), "visible");
+
+    GovernedEvalTaskExecutor.copy(source, target, true);
+
+    assertEquals("hidden", Files.readString(target.resolve("java/example/ServiceTest.java")));
+  }
+
+  @Test
   void aggregatesConcurrentResultsAndSanitizesExecutorErrors() {
     var tasks = new EvalDatasetLoader().load(repositoryRoot().resolve("evals/datasets/v0.1"));
     var clock = Clock.fixed(Instant.parse("2026-08-27T00:00:00Z"), ZoneOffset.UTC);
