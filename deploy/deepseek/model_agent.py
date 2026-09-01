@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -316,11 +317,12 @@ def public_failures(workspace: Path, checks: list[str]) -> list[str]:
 
 def build_failures(workspace: Path) -> list[str]:
     wrapper = workspace / "mvnw"
-    if not wrapper.is_file():
-        return []
+    executable = str(wrapper) if wrapper.is_file() else shutil.which("mvn")
+    if executable is None:
+        return ["Maven verification is unavailable in the agent environment"]
     try:
         result = subprocess.run(
-            [str(wrapper), "--batch-mode", "--no-transfer-progress", "test"],
+            [executable, "--batch-mode", "--no-transfer-progress", "test"],
             cwd=workspace,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -368,24 +370,32 @@ def main() -> int:
         usage = {"input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
         feedback = ""
         for attempt in range(2):
-            response = completion(
-                prompt + feedback,
-                source_context(workspace),
-                args.served_model_name,
-                args.allowed_file,
-                args.acceptance,
-            )
-            add_usage(usage, response)
             try:
+                response = completion(
+                    prompt + feedback,
+                    source_context(workspace),
+                    args.served_model_name,
+                    args.allowed_file,
+                    args.acceptance,
+                )
+                add_usage(usage, response)
                 apply_files(workspace, response_object(response), args.allowed_file)
                 failures = public_failures(workspace, args.acceptance) + build_failures(workspace)
-            except (ValueError, OSError, json.JSONDecodeError) as error:
+            except (
+                ValueError,
+                OSError,
+                json.JSONDecodeError,
+                urllib.error.URLError,
+            ) as error:
                 failures = [f"Patch application failed: {error}"]
             if not failures or attempt == 1:
                 break
             feedback = (
-                "\n\nYour previous patch failed public verification. Fix the current workspace and "
-                "return complete replacement content again. Do not explain. Failures:\n- "
+                "\n\nRETRY REQUIRED. Your previous patch failed public verification. Fix the current "
+                "workspace and return complete replacement content again. Do not explain. Before "
+                "returning, verify every public check yourself. A CONTAINS check requires its value "
+                "to appear as exact literal source text; compilation errors must be fixed with all "
+                "required imports and types. Failures:\n- "
                 + "\n- ".join(failures)
             )
         output_tokens = usage["output_tokens"]
