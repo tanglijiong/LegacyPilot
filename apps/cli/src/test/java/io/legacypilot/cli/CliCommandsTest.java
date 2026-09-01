@@ -496,6 +496,83 @@ class CliCommandsTest {
   }
 
   @Test
+  void runsTheLocalHttpDeepSeekAdapterWithoutExternalConsent() throws Exception {
+    var root = Path.of("../..").toAbsolutePath().normalize();
+    var calls = temporary.resolve("local-http-calls.txt");
+    var python = temporary.resolve("fake-python");
+    Files.writeString(
+        python,
+        """
+        #!/bin/sh
+        if [ "$1" = "--version" ]; then echo 'Python test'; exit 0; fi
+        cat >/dev/null
+        printf '%%s\n' "$LEGACY_PILOT_MODEL_BASE_URL" >> '%s'
+        printf '%%s\n' '{"type":"turn.completed","usage":{"input_tokens":10,"output_tokens":2}}'
+        """
+            .formatted(calls));
+    assertTrue(python.toFile().setExecutable(true));
+    var maven = temporary.resolve("local-mvnw");
+    Files.writeString(maven, "#!/bin/sh\nexit 0\n");
+    assertTrue(maven.toFile().setExecutable(true));
+    var prompt = temporary.resolve("local-prompt.md");
+    Files.writeString(prompt, "Implement with local DeepSeek: {{requirement}}\n");
+    var experiment = temporary.resolve("local-http-run");
+    var mapper = new ObjectMapper().findAndRegisterModules();
+    var command =
+        new EvalModelRunCommand(
+            new JsonOutput(mapper),
+            mapper,
+            () -> "",
+            () -> "0123456789abcdef0123456789abcdef01234567");
+
+    var result =
+        captureResult(
+            () ->
+                new CommandLine(command)
+                    .execute(
+                        "--dataset",
+                        root.resolve("evals/datasets/v0.3").toString(),
+                        "--output",
+                        experiment.toString(),
+                        "--run-id",
+                        "local-http-run",
+                        "--model-adapter",
+                        "local-http",
+                        "--model-base-url",
+                        "http://127.0.0.1:12434/engines/v1",
+                        "--python-executable",
+                        python.toString(),
+                        "--local-agent-script",
+                        root.resolve("deploy/deepseek/model_agent.py").toString(),
+                        "--model",
+                        "deepseek-local",
+                        "--prompt-file",
+                        prompt.toString(),
+                        "--prompt-version",
+                        "local-prompt-v1",
+                        "--input-price",
+                        "0",
+                        "--cached-input-price",
+                        "0",
+                        "--output-price",
+                        "0",
+                        "--pricing-source",
+                        "local-compute",
+                        "--task-ids",
+                        "task-001",
+                        "--references",
+                        root.resolve("evals/reference-solutions").toString(),
+                        "--maven-wrapper",
+                        maven.toString()));
+
+    assertEquals(0, result.exitCode());
+    assertEquals("http://127.0.0.1:12434/engines/v1", Files.readString(calls).strip());
+    var manifest = mapper.readTree(experiment.resolve("manifest.json").toFile());
+    assertEquals("local-http", manifest.path("environment").path("modelAdapter").asText());
+    assertEquals("local-only", manifest.path("environment").path("networkBoundary").asText());
+  }
+
+  @Test
   void rejectsIncompleteDirtyAndInvalidProviderEvalStarts() throws Exception {
     var root = Path.of("../..").toAbsolutePath().normalize();
     var mapper = new ObjectMapper().findAndRegisterModules();

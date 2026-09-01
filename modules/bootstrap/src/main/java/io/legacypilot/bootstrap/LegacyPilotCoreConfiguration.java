@@ -25,6 +25,7 @@ import io.legacypilot.model.ModelErrorType;
 import io.legacypilot.model.ModelException;
 import io.legacypilot.model.RawModelClient;
 import io.legacypilot.model.StructuredModelGateway;
+import io.legacypilot.model.springai.LocalHttpRawModelClient;
 import io.legacypilot.model.springai.SpringAiRawModelClient;
 import io.legacypilot.model.springai.UnixSocketRawModelClient;
 import io.legacypilot.observability.AgentMetrics;
@@ -307,9 +308,16 @@ public class LegacyPilotCoreConfiguration {
   RawModelClient rawModelClient(
       ObjectProvider<ChatModel> chatModel,
       ObjectMapper mapper,
-      @Value("${legacy-pilot.model.unix-socket:}") String unixSocket) {
+      @Value("${legacy-pilot.model.unix-socket:}") String unixSocket,
+      @Value("${legacy-pilot.model.base-url:}") String baseUrl) {
+    if (!unixSocket.isBlank() && !baseUrl.isBlank()) {
+      throw new IllegalArgumentException("configure only one local model endpoint");
+    }
     if (!unixSocket.isBlank()) {
       return new UnixSocketRawModelClient(Path.of(unixSocket), mapper);
+    }
+    if (!baseUrl.isBlank()) {
+      return new LocalHttpRawModelClient(baseUrl, mapper);
     }
     var provider = chatModel.getIfAvailable();
     if (provider == null) {

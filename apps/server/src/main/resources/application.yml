@@ -32,6 +32,7 @@ legacy-pilot:
     maximum-duration: ${LEGACY_PILOT_MAXIMUM_DURATION:30m}
   model:
     unix-socket: ${LEGACY_PILOT_MODEL_SOCKET:}
+    base-url: ${LEGACY_PILOT_MODEL_BASE_URL:}
   sandbox:
     maven-image: ${LEGACY_PILOT_MAVEN_IMAGE:maven:3.9.16-eclipse-temurin-21}
     digest-required: ${LEGACY_PILOT_SANDBOX_DIGEST_REQUIRED:false}

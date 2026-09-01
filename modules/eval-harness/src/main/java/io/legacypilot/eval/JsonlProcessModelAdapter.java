@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -24,13 +25,24 @@ final class JsonlProcessModelAdapter implements EvalModelAdapter {
   private final String adapterId;
   private final NetworkBoundary boundary;
   private final CommandFactory commands;
+  private final Map<String, String> environment;
   private final ObjectMapper mapper;
 
   JsonlProcessModelAdapter(
       String adapterId, NetworkBoundary boundary, CommandFactory commands, ObjectMapper mapper) {
+    this(adapterId, boundary, commands, Map.of(), mapper);
+  }
+
+  JsonlProcessModelAdapter(
+      String adapterId,
+      NetworkBoundary boundary,
+      CommandFactory commands,
+      Map<String, String> environment,
+      ObjectMapper mapper) {
     this.adapterId = requireText(adapterId);
     this.boundary = Objects.requireNonNull(boundary);
     this.commands = Objects.requireNonNull(commands);
+    this.environment = Map.copyOf(Objects.requireNonNull(environment));
     this.mapper = Objects.requireNonNull(mapper);
   }
 
@@ -44,6 +56,7 @@ final class JsonlProcessModelAdapter implements EvalModelAdapter {
       var builder =
           new ProcessBuilder(command).directory(workspace.toFile()).redirectErrorStream(false);
       scrubSensitiveEnvironment(builder.environment());
+      builder.environment().putAll(environment);
       var process = builder.start();
       try (var input = process.getOutputStream()) {
         input.write(prompt.getBytes(StandardCharsets.UTF_8));

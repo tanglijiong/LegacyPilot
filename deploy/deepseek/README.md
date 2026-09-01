@@ -1,6 +1,35 @@
-# DeepSeek offline model Agent image
+# DeepSeek 本地模型
+
+## 开发机直接运行（当前正式技术基线）
+
+开发与技术验收不需要银行 OIDC、内部 CA、测试身份、审批摘要、CUDA 或 GPU 服务器。Apple Silicon 可直接使用 Docker Model Runner 的 Metal/llama.cpp 引擎；普通 x86 机器也可以使用 CPU，只是推理会更慢。
+
+本项目选用 DeepSeek-Coder-V2-Lite-Instruct 的 `Q4_K_M` GGUF 量化版本。下载并启动模型：
+
+```bash
+docker model pull \
+  hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M
+docker model run \
+  hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M \
+  '只回复 OK'
+```
+
+LegacyPilot Server/CLI 连接本机 OpenAI-compatible API 时设置：
+
+```bash
+export LEGACY_PILOT_MODEL_BASE_URL=http://127.0.0.1:12434/engines/v1
+export LEGACY_PILOT_MODEL=hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M
+```
+
+程序只接受显式 loopback HTTP 地址，不接受公网主机、HTTPS 代理、URL 凭据或重定向。无需 API key。
+
+真实 5 题 smoke 可使用 `eval-model-run --model-adapter local-http`，完整命令见 [`docs/EVALS.md`](../../docs/EVALS.md)。
+
+## 可选：严格隔离部署
 
 This image is the first bank-internal implementation of the LegacyPilot JSONL model-agent contract. A persistent vLLM process serves DeepSeek over a Unix-domain socket, so the model loads once for the complete experiment. Short-lived task Agent containers share only that socket and an isolated workspace; they have Docker networking disabled. The Agent supplies bounded Java production source context, accepts a structured complete-file response, and atomically writes only under `src/main/java` or `src/main/resources`.
+
+以下镜像 digest、权重摘要、vLLM/CUDA 和 Unix socket 要求只适用于机构希望建设严格离线、可审计部署的场景，不是本地开发或本版本技术交付门槛。
 
 The public build does not download model weights or select an upstream container tag. The bank build pipeline must:
 

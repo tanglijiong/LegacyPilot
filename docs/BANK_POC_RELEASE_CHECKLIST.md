@@ -2,7 +2,7 @@
 
 **候选版本：** `v0.3.0-bank-poc`
 **检查日期：** 2026-09-01
-**发布决定：** 暂不发布候选版本；等待固定摘要的离线模型与可用容器/GPU主机完成技术验收。
+**发布决定：** 暂不发布候选版本；正在完成本地量化 DeepSeek 实测与最终全量回归。
 
 本检查表区分“解决方案已实现”和“目标环境已验证”。没有真实环境证据的条目保持阻塞，不以模拟结果替代。
 
@@ -37,15 +37,14 @@
 - [x] `build-evidence.sh` 已验证失败关闭和本机完整 digest 正向路径，可从干净构建生成四类非空证据文件；本机镜像仅作为可复验的开发证据。
 - [x] 主机预检对 Maven、PostgreSQL、DeepSeek Agent 三类离线镜像执行完整 digest 与本地存在性检查，并校验只读模型权重、批准摘要标记、数据库密码文件和模型 Unix socket；非法摘要或缺失镜像均失败关闭。
 
-## 环境阻塞项
+## 剩余技术任务
 
-- [ ] 提供批准且按 digest 固定的 Maven sandbox、vLLM/DeepSeek Agent 和 PostgreSQL 镜像。
-- [ ] 提供只读 DeepSeek 权重目录并记录 `MODEL_ARTIFACT_SHA256`。
+- [ ] 完成本机 DeepSeek-Coder-V2-Lite-Instruct `Q4_K_M` 下载并验证 OpenAI-compatible API。
 - [ ] 运行 task-001–005 DeepSeek smoke，达到至少 4/5 且基础设施错误为 0。
 - [ ] 使用新的不可变 run ID 运行 20 题真实 DeepSeek 基线，记录 pass@1、反馈后成绩、失败、Token、成本和 p50/p95。
 - [ ] 对基线与候选策略运行 `eval-compare` 并通过发布门禁。
-- [ ] 在空目录/目标主机执行 PostgreSQL + state 备份恢复、JAR/Policy 升级回滚和完整统一 API E2E。
+- [ ] 重新运行完整构建、安全检查和本机 Docker/PostgreSQL 集成测试，生成最终证据。
 
-## 解阻输入
+## 不属于技术发布门槛
 
-执行剩余技术验收需要测试环境提供：可用 rootless Docker/GPU 主机、三个固定镜像的完整 digest、DeepSeek 权重路径与 SHA-256，以及目标环境测试所需的 OIDC、PostgreSQL 和 TLS 配置。凭据不写入仓库。发布不依赖银行人员或外部机构审批。
+银行 OIDC、内部 CA/TLS 证书、数据库正式密钥、四类测试身份、人员验收签字、模型授权/审批摘要、固定 digest 的机构镜像、CUDA GPU 服务器和目标主机恢复演练，仅在未来真实部署到具体机构时按需配置，不影响本地技术版本完成与发布。

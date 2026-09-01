@@ -16,6 +16,8 @@ logging:
     root: ERROR
 
 legacy-pilot:
+  model:
+    base-url: ${LEGACY_PILOT_MODEL_BASE_URL:}
   policy:
     file: ${LEGACY_PILOT_POLICY_FILE:}
   workspace:

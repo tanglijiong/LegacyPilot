@@ -1,13 +1,13 @@
 # LegacyPilot 银行内网 PoC 交付计划与状态台账
 
 **目标版本：** `v0.3.0-bank-poc`
-**状态：** Scope frozen — target-environment validation pending
+**状态：** 技术交付收口中 — 本地 DeepSeek 下载与实测进行中
 **最后更新：** 2026-09-01
 **冻结分支：** `codex/v0.3-bank-poc-release`
 **工程实现基线：** `26465f85a5f80a79f0f21ab145678ddbbafd85ed`
 **部署与验收基线：** `cc96b1e`（包含 `04f774d9f4db0f1f3658502cc4677cc85c3a2506` 的部署包，并加固三类镜像、模型权重和证据范围门禁）
 
-在阶段 4 和阶段 7 的技术门禁通过前，不创建正式版本标签、不发布候选物，也不把 reference ceiling 记作真实模型成绩。该参考方案不要求任何银行人员或外部机构签署；后续代码变更必须重新执行完整证据构建并更新上述基线，最终完整源码身份由签名发布标签确定。
+在阶段 4 和阶段 7 的技术门禁通过前，不创建正式版本标签、不发布候选物，也不把 reference ceiling 记作真实模型成绩。银行 OIDC、内部 CA、数据库密钥、测试身份、人员签字和模型审批均不属于技术交付门槛；后续代码变更必须重新执行完整证据构建并更新上述基线。
 
 ## 1. 完成定义
 
@@ -15,7 +15,7 @@
 
 1. 用户可通过统一 API 或 CLI 完成“注册项目 → 创建任务 → 建立索引 → 生成计划 → 审批 → 受控执行 → 验证 → 获取补丁与报告”。
 2. REST 管理面默认启用认证，具备管理员、开发者、审批人和审计员角色；审批者身份来自认证上下文，并执行职责分离。
-3. 本地模型和任务 Agent 在零外网容器中运行；镜像、模型权重、Prompt、Policy 和实验数据均有不可变摘要。
+3. 本地 DeepSeek 可在开发机通过 loopback API 运行；严格零外网容器、固定镜像和权重摘要作为可选机构部署能力保留。
 4. 固定 20 题数据集具备真实内网模型 pass@1、一次公开反馈后的最终成绩、失败分类、成本、Token 和耗时证据。
 5. 能生成基线/候选 A/B 比较、回归门禁、Markdown/JSON 报告和离线静态 Dashboard。
 6. 提供单节点 PostgreSQL、LegacyPilot Server、执行沙箱及 vLLM/DeepSeek 的参考拓扑和离线部署材料。
@@ -38,14 +38,12 @@
 | 1. 统一执行闭环 | DONE | 项目 task/run 可自动进入索引、Agent、审批、恢复、验证和报告，不再要求客户端构造内部 `ProjectIndex` |
 | 2. 企业身份与职责分离 | DONE | 默认认证、RBAC、可信 actor、申请/审批分离和安全 API 测试通过 |
 | 3. Eval 证据产品化 | DONE | 失败分类、A/B 比较、门禁和单文件离线 Dashboard 完成 |
-| 4. DeepSeek 真实基线 | BLOCKED-ENV | 需要经批准的固定镜像与本地模型权重；先完成 5 题 smoke，再运行 20 题全量 |
+| 4. DeepSeek 真实基线 | IN PROGRESS | 本机 Metal/llama.cpp 路径已确定，Q4 模型下载中；先完成 5 题 smoke，再运行 20 题全量 |
 | 5. 参考部署包 | DONE | PostgreSQL 单节点参考拓扑、离线物料、配置与验收脚本完整 |
 | 6. 银行安全与运维材料 | DONE | 威胁模型、数据流、端口、SBOM、审计、备份和升级材料完整 |
-| 7. 候选版本验收 | BLOCKED-ENV | 确定性门禁与本机真实 Docker 已通过；DeepSeek、OIDC 和目标主机恢复演练等待批准环境 |
+| 7. 候选版本验收 | IN PROGRESS | 确定性门禁与本机真实 Docker 已通过；只等待本地 DeepSeek 实测和最终全量回归 |
 
-`BLOCKED-ENV` 只表示该阶段依赖仓库外的模型权重和 GPU/容器环境；它不会阻止其他阶段继续实施。没有真实运行证据时，不得把 reference ceiling 宣称为模型成绩。
-
-当前环境检查：Docker Desktop 28.4.0 已可用，两项真实 Docker 沙箱测试和一项 PostgreSQL 16 应用集成测试均已执行并通过；仍未发现批准的内网 Agent 镜像、`MODEL_ARTIFACT_SHA256` 或本地 DeepSeek 权重，因此不得启动或伪造阶段 4 的实验。主 Agent Runtime 已支持与 Eval 相同的 OpenAI-compatible Unix socket 模型边界，待批准环境就绪后可直接验收。
+当前没有银行环境阻塞。Docker Desktop 28.4.0、Apple M2 Max、32GB 统一内存和 Model Runner Metal 引擎可用；本机正在获取 `Q4_K_M` 量化 DeepSeek。主 Agent Runtime 与 Eval 均已增加仅限 loopback 的 OpenAI-compatible HTTP 路径，同时保留可选 Unix socket 严格隔离路径。没有真实运行证据时，不得把 reference ceiling 宣称为模型成绩。
 
 本机确定性证据（2026-09-01）：完整 Maven reactor 24/24 成功，独立空源码目录复验同样通过；Reactor 内 Java 测试 170 项全部执行，失败 0、错误 0、跳过 0，其中两项 Maven sandbox 和一项 PostgreSQL 16 真实 Docker 集成通过。真实库门禁发现并修复了 PostgreSQL 不支持 `CLOB` 以及缺失 Flyway PostgreSQL 模块的问题，并验证 V1/V2 迁移、项目/任务/run API 与执行发起人记录；同时保留已发布 H2 V1 的原始校验和，并通过从 v0.2 数据库升级到 V2 的回归测试。PostgreSQL 16 参考 Compose 另已以完整镜像 digest 完成健康检查、写入后重启持久化和 `pg_dump` 逻辑恢复校验，烟测资源已清理；DeepSeek 离线契约 4/4；`v0.3-core.1` reference ceiling 20/20；CycloneDX 1.6 SBOM 含 123 个组件。`build-evidence.sh` 缺少 digest 时退出 2，使用本机完整 Maven/PostgreSQL digest 时可从干净构建生成非空 SBOM、第三方许可、依赖树和 SHA-256 清单。本机输出用于验证参考方案的可复现性。真实 Bearer JWT 测试已验证 OIDC `roles` claim 和 subject 信任边界；统一执行路径已进入受管理员保护的 OpenAPI 契约，应用与安全错误具有稳定错误码和 correlation ID；示例见 [银行内网 PoC API 契约与操作示例](BANK_POC_API.md)。候选发布状态详见 [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md)。
 

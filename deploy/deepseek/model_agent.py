@@ -14,6 +14,7 @@ import sys
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
@@ -108,7 +109,23 @@ def local_request(path: str, payload: dict | None = None, timeout: int = 10) -> 
             return json.loads(data) if data else {}
         finally:
             connection.close()
-    url = f"http://{HOST}:{PORT}{path}"
+    base_url = os.environ.get("LEGACY_PILOT_MODEL_BASE_URL")
+    if base_url:
+        parsed = urllib.parse.urlsplit(base_url)
+        if (
+            parsed.scheme != "http"
+            or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+            or parsed.port is None
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("local model base URL must be an explicit loopback HTTP endpoint")
+        suffix = path[3:] if path.startswith("/v1/") else path
+        url = base_url.rstrip("/") + suffix
+    else:
+        url = f"http://{HOST}:{PORT}{path}"
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(
         url,
@@ -159,7 +176,7 @@ def source_context(workspace: Path) -> str:
 
 def completion(prompt: str, context: str, served_name: str) -> dict:
     system = (
-        "You are a Java 21 maintenance agent inside an offline bank environment. "
+        "You are a Java 21 maintenance agent running in a local offline environment. "
         "Return only one JSON object with a files array. Each item must contain path and the "
         "complete replacement content. Change only production files under src/main/java or "
         "src/main/resources. Never change tests, pom.xml, build output, or unrelated files."
@@ -257,11 +274,12 @@ def main() -> int:
     process = None
     try:
         socket_value = os.environ.get("LEGACY_PILOT_MODEL_SOCKET")
-        if socket_value:
+        base_url = os.environ.get("LEGACY_PILOT_MODEL_BASE_URL")
+        if socket_value or base_url:
             deadline = time.monotonic() + 30
             while time.monotonic() < deadline:
                 try:
-                    local_request("/health", timeout=2)
+                    local_request("/v1/models" if base_url else "/health", timeout=2)
                     break
                 except (OSError, ValueError, RuntimeError):
                     time.sleep(1)

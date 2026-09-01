@@ -9,9 +9,34 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 
 默认加载经过 manifest 和 fixture digest 验证的 `evals/datasets/v0.3` core。也可通过 `--dataset`、`--references`、`--maven-wrapper` 和 `--concurrency` 指定路径与并发数；`--fixture` 仅用于兼容没有 manifest 的 v0.1 数据集。v2 契约详见 [Eval Dataset v2 与 Fixture 治理](EVAL_DATASET_V2.md)。
 
-## 可恢复的内网模型实验
+## 本地 DeepSeek 实验
 
-Runner 核心只依赖通用 `EvalModelAdapter`，不依赖模型厂商。默认适配器使用两个均为 `--network none` 的本地容器：持久化 vLLM 服务只读挂载模型权重并监听 Unix-domain socket；每个任务的短生命周期 Agent 只挂载该 socket 和隔离 workspace。模型只加载一次，两个容器均不能访问内外网。
+当前技术基线使用 Docker Model Runner 在开发机运行量化 DeepSeek，并通过仅限 loopback 的 OpenAI-compatible API 调用。它不要求 CUDA、GPU 服务器、OIDC、证书、镜像审批或权重审批。先按 [`deploy/deepseek`](../deploy/deepseek/README.md) 下载模型，然后运行 5 题 smoke：
+
+```bash
+./mvnw -q -pl apps/cli -am package -DskipTests
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
+  --output evals/runs/deepseek-local-smoke \
+  --run-id deepseek-local-smoke \
+  --model-adapter local-http \
+  --model-base-url http://127.0.0.1:12434/engines/v1 \
+  --model hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M \
+  --reasoning-effort high \
+  --prompt-file evals/prompts/baseline-prompt-v2.md \
+  --prompt-version baseline-prompt-v2 \
+  --policy-version local-deepseek-agent-v1 \
+  --input-price 0 --cached-input-price 0 --output-price 0 \
+  --pricing-source local-compute \
+  --maximum-cost-usd 0 --maximum-tokens 2000000 \
+  --maximum-duration PT8H --maximum-provider-errors 3 --concurrency 1 \
+  --task-ids task-001,task-002,task-003,task-004,task-005
+```
+
+目标至少 4/5。通过后使用新的 run-id 并移除 `--task-ids` 运行完整 20 题。实验要求 Git 工作区干净，以保证结果能够追溯到唯一提交。
+
+## 可选：严格隔离的内网模型实验
+
+Runner 核心只依赖通用 `EvalModelAdapter`，不依赖模型厂商。需要严格隔离时，可选适配器使用两个均为 `--network none` 的本地容器：持久化 vLLM 服务只读挂载模型权重并监听 Unix-domain socket；每个任务的短生命周期 Agent 只挂载该 socket 和隔离 workspace。模型只加载一次，两个容器均不能访问内外网。
 
 镜像必须由银行内部镜像仓库预置并固定摘要。Agent 从标准输入读取 Prompt，在 `/workspace` 修改代码并输出 JSONL；新实验必须显式提供模型、Prompt、权重目录、权重审批摘要、socket 目录和价格快照。启动器会在模型健康后写入服务 manifest，Runner 必须逐项核对镜像、模型摘要和资源配置。私有化模型没有按 Token 费用时价格可以记录为 `0`，另行统计 GPU 基础设施成本。DeepSeek 镜像构建和持久化服务启动见 [`deploy/deepseek`](../deploy/deepseek/README.md)。
 

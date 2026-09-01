@@ -7,12 +7,52 @@ import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler
+from http.server import HTTPServer
 
 import model_agent
 import start_model_service
 
 
 class OfflineAgentTest(unittest.TestCase):
+    def test_calls_an_openai_compatible_loopback_endpoint(self):
+        paths = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                paths.append(self.path)
+                body = b'{"data":[]}'
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, format, *args):
+                pass
+
+        server = HTTPServer(("127.0.0.1", 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        previous = os.environ.pop("LEGACY_PILOT_MODEL_SOCKET", None)
+        old_base = os.environ.get("LEGACY_PILOT_MODEL_BASE_URL")
+        os.environ["LEGACY_PILOT_MODEL_BASE_URL"] = (
+            f"http://127.0.0.1:{server.server_port}/engines/v1"
+        )
+        try:
+            self.assertEqual({"data": []}, model_agent.local_request("/v1/models", timeout=2))
+            self.assertEqual(["/engines/v1/models"], paths)
+            os.environ["LEGACY_PILOT_MODEL_BASE_URL"] = "https://localhost:12434/v1"
+            with self.assertRaises(ValueError):
+                model_agent.local_request("/v1/models", timeout=2)
+        finally:
+            server.shutdown()
+            server.server_close()
+            if previous is not None:
+                os.environ["LEGACY_PILOT_MODEL_SOCKET"] = previous
+            if old_base is None:
+                os.environ.pop("LEGACY_PILOT_MODEL_BASE_URL", None)
+            else:
+                os.environ["LEGACY_PILOT_MODEL_BASE_URL"] = old_base
+
     def test_calls_the_model_only_through_the_approved_unix_socket(self):
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):

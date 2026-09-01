@@ -11,6 +11,7 @@ import io.legacypilot.eval.EvalExperimentStore;
 import io.legacypilot.eval.EvalModelAdapter;
 import io.legacypilot.eval.EvalPricingSnapshot;
 import io.legacypilot.eval.GovernedEvalTaskExecutor;
+import io.legacypilot.eval.LocalHttpModelAdapter;
 import io.legacypilot.eval.MavenFixtureVerifier;
 import io.legacypilot.eval.ResumableEvalRunner;
 import java.io.IOException;
@@ -105,6 +106,15 @@ public class EvalModelRunCommand implements Callable<Integer> {
 
   @Option(names = "--model-adapter", defaultValue = "airgap-container")
   private String modelAdapter;
+
+  @Option(names = "--model-base-url", defaultValue = "http://127.0.0.1:12434/engines/v1")
+  private String modelBaseUrl;
+
+  @Option(names = "--python-executable", defaultValue = "python3")
+  private String pythonExecutable;
+
+  @Option(names = "--local-agent-script", defaultValue = "deploy/deepseek/model_agent.py")
+  private Path localAgentScript;
 
   @Option(names = "--allow-external-provider")
   private boolean allowExternalProvider;
@@ -266,7 +276,7 @@ public class EvalModelRunCommand implements Callable<Integer> {
         || outputPrice == null
         || pricingSource == null
         || pricingSource.isBlank()
-        || (!modelAdapter.matches("airgap-container|codex"))
+        || (!modelAdapter.matches("airgap-container|local-http|codex"))
         || (modelAdapter.equals("airgap-container")
             && (agentImage == null
                 || agentImage.isBlank()
@@ -308,6 +318,15 @@ public class EvalModelRunCommand implements Callable<Integer> {
       return new CodexCliModelAdapter(
           resolveExecutable(codexExecutable), manifest.model(), manifest.reasoningEffort(), mapper);
     }
+    if ("local-http".equals(adapter)) {
+      return new LocalHttpModelAdapter(
+          resolveExecutable(pythonExecutable),
+          Path.of(requiredEnvironment(manifest, "localAgentScript")),
+          requiredEnvironment(manifest, "modelBaseUrl"),
+          manifest.model(),
+          manifest.reasoningEffort(),
+          mapper);
+    }
     throw new IllegalStateException("persisted eval model adapter is unsupported");
   }
 
@@ -346,6 +365,15 @@ public class EvalModelRunCommand implements Callable<Integer> {
       values.put("tensorParallelSize", Integer.toString(config.tensorParallelSize()));
       values.put("maxModelLength", Integer.toString(config.maxModelLength()));
       values.put("docker", commandOutput(resolveExecutable(dockerExecutable), "--version"));
+    } else if (modelAdapter.equals("local-http")) {
+      var script = localAgentScript.toAbsolutePath().normalize();
+      if (!Files.isRegularFile(script)) {
+        throw new IllegalArgumentException("local model agent script is unavailable");
+      }
+      values.put("networkBoundary", "local-only");
+      values.put("modelBaseUrl", modelBaseUrl);
+      values.put("localAgentScript", script.toString());
+      values.put("python", commandOutput(resolveExecutable(pythonExecutable), "--version"));
     } else if (modelAdapter.equals("codex")) {
       values.put("networkBoundary", "external-provider-explicit");
       values.put("codex", commandOutput(resolveExecutable(codexExecutable), "--version"));
