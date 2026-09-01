@@ -48,6 +48,10 @@ class MavenToolTest {
     assertEquals("SUCCESS", result.path("status").asText());
     assertEquals(command, sandbox.last.command());
     assertEquals(0, result.path("exitCode").asInt());
+    var pinned = "registry.bank.example/maven@sha256:" + "a".repeat(64);
+    MavenTool.tests(sandbox, workspace, Set.of(), Set.of(), limits(), pinned)
+        .execute(new ToolContext("run", workspace, Set.of(), true), MAPPER.readTree("{}"));
+    assertEquals(pinned, sandbox.last.image());
   }
 
   @Test

@@ -107,6 +107,8 @@ final class DockerCommandFactory {
             "/workspace",
             "--tmpfs",
             "/tmp:rw,noexec,nosuid,nodev,size=" + limits.temporaryStorageBytes(),
+            "--tmpfs",
+            "/jansi-tmp:rw,exec,nosuid,nodev,size=16777216",
             "--mount",
             "type=bind,src=" + workspace + ",dst=/workspace",
             "--env",
@@ -122,7 +124,17 @@ final class DockerCommandFactory {
                   + ",dst=/maven-cache"
                   + (request.phase() == SandboxPhase.DEPENDENCY_PREWARM ? "" : ",readonly")));
     }
+    var requestedMavenOptions = request.environment().getOrDefault("MAVEN_OPTS", "").trim();
+    var jansiOptions = "-Djansi.tmpdir=/jansi-tmp -Djansi.mode=passthrough";
+    command.addAll(
+        List.of(
+            "--env",
+            "MAVEN_OPTS="
+                + (requestedMavenOptions.isEmpty()
+                    ? jansiOptions
+                    : requestedMavenOptions + " " + jansiOptions)));
     request.environment().entrySet().stream()
+        .filter(entry -> !"MAVEN_OPTS".equals(entry.getKey()))
         .sorted(java.util.Map.Entry.comparingByKey())
         .forEach(
             entry -> command.addAll(List.of("--env", entry.getKey() + "=" + entry.getValue())));

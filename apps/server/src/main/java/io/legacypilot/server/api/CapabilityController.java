@@ -5,6 +5,7 @@ import io.legacypilot.runtime.CapabilityService;
 import io.legacypilot.runtime.CapabilityView;
 import io.legacypilot.runtime.IssuedCapability;
 import java.util.List;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,8 +24,18 @@ public final class CapabilityController {
   }
 
   @PostMapping
-  IssuedCapability issue(@RequestBody CapabilityRequest request) {
-    return capabilities.issue(request);
+  IssuedCapability issue(@RequestBody CapabilityRequest request, Authentication authentication) {
+    return capabilities.issue(
+        new CapabilityRequest(
+            authentication.getName(),
+            request.sessionId(),
+            request.runId(),
+            request.tool(),
+            request.workspace(),
+            request.actionDigest(),
+            request.planDigest(),
+            request.expiresAt(),
+            request.maximumUses()));
   }
 
   @GetMapping

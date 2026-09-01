@@ -14,27 +14,39 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(ResourceNotFoundException.class)
   ProblemDetail notFound(ResourceNotFoundException exception) {
-    return problem(HttpStatus.NOT_FOUND, exception);
+    return problem(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", exception);
   }
 
   @ExceptionHandler({
     ConcurrentUpdateException.class,
     InvalidStateTransitionException.class,
-    WorkspaceException.class
+    WorkspaceException.class,
+    IllegalStateException.class
   })
   ProblemDetail conflict(RuntimeException exception) {
-    return problem(HttpStatus.CONFLICT, exception);
+    return problem(HttpStatus.CONFLICT, conflictCode(exception), exception);
   }
 
   @ExceptionHandler({IllegalArgumentException.class, NullPointerException.class})
   ProblemDetail badRequest(RuntimeException exception) {
-    return problem(HttpStatus.BAD_REQUEST, exception);
+    return problem(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", exception);
   }
 
-  private static ProblemDetail problem(HttpStatus status, RuntimeException exception) {
-    var result = ProblemDetail.forStatusAndDetail(status, safeMessage(exception));
-    result.setTitle(status.getReasonPhrase());
-    return result;
+  private static ProblemDetail problem(HttpStatus status, String code, RuntimeException exception) {
+    return ApiProblems.create(status, code, safeMessage(exception));
+  }
+
+  private static String conflictCode(RuntimeException exception) {
+    if (exception instanceof ConcurrentUpdateException) {
+      return "CONCURRENT_UPDATE";
+    }
+    if (exception instanceof InvalidStateTransitionException) {
+      return "INVALID_STATE_TRANSITION";
+    }
+    if (exception instanceof WorkspaceException) {
+      return "WORKSPACE_CONFLICT";
+    }
+    return "EXECUTION_CONFLICT";
   }
 
   private static String safeMessage(RuntimeException exception) {

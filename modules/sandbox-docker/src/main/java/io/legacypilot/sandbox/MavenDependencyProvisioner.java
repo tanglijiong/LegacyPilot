@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class MavenDependencyProvisioner {
+  private static final int MAXIMUM_PREWARM_ATTEMPTS = 3;
   private final SandboxExecutor sandbox;
   private final DependencyCacheManager caches;
   private final String image;
@@ -19,26 +20,32 @@ public final class MavenDependencyProvisioner {
 
   public ProvisionedCache prewarm(Path workspace, SandboxLimits limits) {
     var cache = caches.cacheFor(workspace);
-    var result =
-        sandbox.execute(
-            new SandboxRequest(
-                "prewarm-"
-                    + Objects.requireNonNull(cache.getFileName()).toString().substring(0, 16),
-                image,
-                workspace,
-                cache,
-                List.of(
-                    "mvn",
-                    "--batch-mode",
-                    "-Dmaven.repo.local=/maven-cache",
-                    "-Dgroups=__LegacyPilotDependencyPrewarm__",
-                    "dependency:go-offline",
-                    "test"),
-                Map.of(),
-                limits,
-                SandboxPhase.DEPENDENCY_PREWARM));
+    var idPrefix =
+        "prewarm-" + Objects.requireNonNull(cache.getFileName()).toString().substring(0, 16);
+    SandboxResult result = null;
+    for (var attempt = 1; attempt <= MAXIMUM_PREWARM_ATTEMPTS; attempt++) {
+      result =
+          sandbox.execute(
+              new SandboxRequest(
+                  idPrefix + "-" + attempt,
+                  image,
+                  workspace,
+                  cache,
+                  List.of(
+                      "mvn",
+                      "--batch-mode",
+                      "-Dmaven.repo.local=/maven-cache",
+                      "-Dgroups=__LegacyPilotDependencyPrewarm__",
+                      "test"),
+                  Map.of(),
+                  limits,
+                  SandboxPhase.DEPENDENCY_PREWARM));
+      if (result.successful()) {
+        break;
+      }
+    }
     caches.validate(cache);
-    return new ProvisionedCache(cache, result);
+    return new ProvisionedCache(cache, Objects.requireNonNull(result));
   }
 
   public record ProvisionedCache(Path path, SandboxResult result) {}

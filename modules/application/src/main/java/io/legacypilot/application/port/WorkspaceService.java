@@ -10,5 +10,7 @@ public interface WorkspaceService {
 
   WorkspaceDescriptor create(Project project, RunId runId);
 
+  WorkspaceDescriptor open(Project project, RunId runId, WorkspaceId workspaceId);
+
   void cleanup(Project project, RunId runId, WorkspaceId workspaceId);
 }

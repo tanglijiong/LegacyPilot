@@ -9,6 +9,8 @@ spring:
     enabled: true
 
 legacy-pilot:
+  security:
+    mode: ${LEGACY_PILOT_SECURITY_MODE:deny-all}
   policy:
     file: ${LEGACY_PILOT_POLICY_FILE:}
   workspace:
@@ -18,7 +20,25 @@ legacy-pilot:
     lease-ttl: ${LEGACY_PILOT_AGENT_LEASE_TTL:2m}
     memory:
       maximum-entries: ${LEGACY_PILOT_AGENT_MEMORY_MAXIMUM_ENTRIES:5000}
+  execution:
+    model: ${LEGACY_PILOT_MODEL:local-model}
+    context-token-budget: ${LEGACY_PILOT_CONTEXT_TOKEN_BUDGET:12000}
+    maximum-candidates: ${LEGACY_PILOT_MAXIMUM_CANDIDATES:50}
+    graph-depth: ${LEGACY_PILOT_GRAPH_DEPTH:2}
+    maximum-steps: ${LEGACY_PILOT_MAXIMUM_STEPS:20}
+    maximum-retries: ${LEGACY_PILOT_MAXIMUM_RETRIES:2}
+    maximum-tokens: ${LEGACY_PILOT_MAXIMUM_TOKENS:100000}
+    maximum-cost-usd: ${LEGACY_PILOT_MAXIMUM_COST_USD:10.00}
+    maximum-duration: ${LEGACY_PILOT_MAXIMUM_DURATION:30m}
+  model:
+    unix-socket: ${LEGACY_PILOT_MODEL_SOCKET:}
+  sandbox:
+    maven-image: ${LEGACY_PILOT_MAVEN_IMAGE:maven:3.9.16-eclipse-temurin-21}
+    digest-required: ${LEGACY_PILOT_SANDBOX_DIGEST_REQUIRED:false}
 
 springdoc:
+  api-docs:
+    enabled: ${LEGACY_PILOT_OPENAPI_ENABLED:false}
   swagger-ui:
     path: /docs
+    enabled: ${LEGACY_PILOT_OPENAPI_ENABLED:false}

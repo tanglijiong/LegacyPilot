@@ -1,12 +1,14 @@
 package io.legacypilot.server.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.legacypilot.application.error.ResourceNotFoundException;
 import io.legacypilot.model.ModelUsage;
 import io.legacypilot.observability.ReportStore;
 import io.legacypilot.observability.RunReport;
@@ -20,12 +22,15 @@ import io.legacypilot.runtime.CheckpointStore;
 import io.legacypilot.runtime.RecoveryCoordinator;
 import io.legacypilot.runtime.RuntimeApproval;
 import io.legacypilot.runtime.RuntimeStatus;
+import io.legacypilot.server.security.RunSecurityContextStore;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 class AgentRuntimeControllerTest {
 
@@ -36,7 +41,14 @@ class AgentRuntimeControllerTest {
     var approvals = mock(ApprovalStore.class);
     var reports = mock(ReportStore.class);
     var recovery = mock(RecoveryCoordinator.class);
-    var controller = new AgentRuntimeController(runtime, checkpoints, approvals, reports, recovery);
+    var securityContexts = mock(RunSecurityContextStore.class);
+    var controller =
+        new AgentRuntimeController(
+            runtime, checkpoints, approvals, reports, recovery, securityContexts);
+    var developer =
+        UsernamePasswordAuthenticationToken.authenticated("developer-a", "n/a", List.of());
+    var approver =
+        UsernamePasswordAuthenticationToken.authenticated("approver-a", "n/a", List.of());
     var checkpoint = checkpoint();
     var result = new AgentRuntimeResult(checkpoint, null, null);
     var request = mock(AgentRunRequest.class);
@@ -47,7 +59,8 @@ class AgentRuntimeControllerTest {
     when(checkpoints.load("run-1")).thenReturn(Optional.of(checkpoint));
     when(reports.load("run-1")).thenReturn(Optional.of(report));
 
-    assertEquals(result, controller.execute(request));
+    when(request.runId()).thenReturn("run-1");
+    assertEquals(result, controller.execute(request, developer));
     assertEquals(checkpoint, controller.checkpoint("run-1"));
     var approval =
         new AgentRuntimeController.SubmitApprovalRequest(
@@ -58,11 +71,17 @@ class AgentRuntimeControllerTest {
             ApprovalScope.ONCE,
             "safe",
             Instant.now().plusSeconds(60));
-    assertEquals(checkpoint, controller.approve("run-1", approval));
+    assertEquals(checkpoint, controller.approve("run-1", approval, approver));
     assertEquals(result, controller.resume("run-1"));
     assertEquals(report, controller.report("run-1"));
     assertEquals(List.of(), controller.recover());
     verify(approvals).save(any(RuntimeApproval.class));
+    var savedApproval = ArgumentCaptor.forClass(RuntimeApproval.class);
+    verify(approvals).save(savedApproval.capture());
+    assertEquals("approver-a", savedApproval.getValue().actor());
+    assertNotEquals("reviewer", savedApproval.getValue().actor());
+    verify(securityContexts).recordInitiator("run-1", "developer-a");
+    verify(securityContexts).requireIndependentApprover("run-1", "approver-a");
   }
 
   @Test
@@ -73,9 +92,10 @@ class AgentRuntimeControllerTest {
             mock(CheckpointStore.class),
             mock(ApprovalStore.class),
             mock(ReportStore.class),
-            mock(RecoveryCoordinator.class));
-    assertThrows(IllegalArgumentException.class, () -> controller.checkpoint("missing"));
-    assertThrows(IllegalArgumentException.class, () -> controller.report("missing"));
+            mock(RecoveryCoordinator.class),
+            mock(RunSecurityContextStore.class));
+    assertThrows(ResourceNotFoundException.class, () -> controller.checkpoint("missing"));
+    assertThrows(ResourceNotFoundException.class, () -> controller.report("missing"));
   }
 
   private static AgentCheckpoint checkpoint() {

@@ -72,6 +72,10 @@ public record EvalTaskResult(
     return usage.totalTokens();
   }
 
+  public EvalFailure primaryFailure() {
+    return EvalFailureClassifier.classify(this);
+  }
+
   public enum Status {
     PASSED,
     FAILED,

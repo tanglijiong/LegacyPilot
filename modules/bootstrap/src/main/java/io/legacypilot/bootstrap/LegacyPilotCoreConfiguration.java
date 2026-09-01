@@ -26,6 +26,7 @@ import io.legacypilot.model.ModelException;
 import io.legacypilot.model.RawModelClient;
 import io.legacypilot.model.StructuredModelGateway;
 import io.legacypilot.model.springai.SpringAiRawModelClient;
+import io.legacypilot.model.springai.UnixSocketRawModelClient;
 import io.legacypilot.observability.AgentMetrics;
 import io.legacypilot.observability.FileReportStore;
 import io.legacypilot.observability.FileTraceSink;
@@ -52,6 +53,7 @@ import io.legacypilot.runtime.FileRunLeaseStore;
 import io.legacypilot.runtime.FileTaskMemoryStore;
 import io.legacypilot.runtime.RecoveryCoordinator;
 import io.legacypilot.runtime.RunLeaseStore;
+import io.legacypilot.sandbox.DockerImagePolicy;
 import io.legacypilot.sandbox.DockerSandbox;
 import io.legacypilot.sandbox.SandboxExecutor;
 import io.legacypilot.sandbox.SandboxLimits;
@@ -177,8 +179,16 @@ public class LegacyPilotCoreConfiguration {
   }
 
   @Bean
-  SandboxExecutor sandboxExecutor() {
-    return DockerSandbox.secureMavenDefaults();
+  SandboxExecutor sandboxExecutor(
+      @Value("${legacy-pilot.sandbox.maven-image:" + DockerSandbox.DEFAULT_MAVEN_IMAGE + "}")
+          String mavenImage,
+      @Value("${legacy-pilot.sandbox.digest-required:false}") boolean digestRequired) {
+    var imagePolicy =
+        digestRequired
+            ? DockerImagePolicy.digestPinned(Set.of(mavenImage))
+            : DockerImagePolicy.allowlisted(Set.of(mavenImage));
+    return new DockerSandbox(
+        "docker", imagePolicy, Set.of("mvn"), Set.of("MAVEN_OPTS", "JAVA_TOOL_OPTIONS"), false);
   }
 
   @Bean
@@ -236,32 +246,40 @@ public class LegacyPilotCoreConfiguration {
   MavenTool compileProjectTool(
       SandboxExecutor sandbox,
       SandboxLimits limits,
-      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache) {
-    return MavenTool.compile(sandbox, cache, Set.of(), mavenProperties(), limits);
+      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache,
+      @Value("${legacy-pilot.sandbox.maven-image:" + DockerSandbox.DEFAULT_MAVEN_IMAGE + "}")
+          String image) {
+    return MavenTool.compile(sandbox, cache, Set.of(), mavenProperties(), limits, image);
   }
 
   @Bean
   MavenTool runTestsTool(
       SandboxExecutor sandbox,
       SandboxLimits limits,
-      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache) {
-    return MavenTool.tests(sandbox, cache, Set.of(), mavenProperties(), limits);
+      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache,
+      @Value("${legacy-pilot.sandbox.maven-image:" + DockerSandbox.DEFAULT_MAVEN_IMAGE + "}")
+          String image) {
+    return MavenTool.tests(sandbox, cache, Set.of(), mavenProperties(), limits, image);
   }
 
   @Bean
   MavenTool runTestClassTool(
       SandboxExecutor sandbox,
       SandboxLimits limits,
-      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache) {
-    return MavenTool.testClass(sandbox, cache, Set.of(), mavenProperties(), limits);
+      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache,
+      @Value("${legacy-pilot.sandbox.maven-image:" + DockerSandbox.DEFAULT_MAVEN_IMAGE + "}")
+          String image) {
+    return MavenTool.testClass(sandbox, cache, Set.of(), mavenProperties(), limits, image);
   }
 
   @Bean
   MavenTool staticAnalysisTool(
       SandboxExecutor sandbox,
       SandboxLimits limits,
-      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache) {
-    return MavenTool.staticAnalysis(sandbox, cache, Set.of(), mavenProperties(), limits);
+      @Value("${legacy-pilot.maven.cache:${user.home}/.m2/repository}") Path cache,
+      @Value("${legacy-pilot.sandbox.maven-image:" + DockerSandbox.DEFAULT_MAVEN_IMAGE + "}")
+          String image) {
+    return MavenTool.staticAnalysis(sandbox, cache, Set.of(), mavenProperties(), limits, image);
   }
 
   @Bean
@@ -286,7 +304,13 @@ public class LegacyPilotCoreConfiguration {
   }
 
   @Bean
-  RawModelClient rawModelClient(ObjectProvider<ChatModel> chatModel) {
+  RawModelClient rawModelClient(
+      ObjectProvider<ChatModel> chatModel,
+      ObjectMapper mapper,
+      @Value("${legacy-pilot.model.unix-socket:}") String unixSocket) {
+    if (!unixSocket.isBlank()) {
+      return new UnixSocketRawModelClient(Path.of(unixSocket), mapper);
+    }
     var provider = chatModel.getIfAvailable();
     if (provider == null) {
       return request -> {

@@ -13,19 +13,21 @@ import org.junit.jupiter.api.io.TempDir;
 
 class DockerSandboxIntegrationTest {
 
+  private static final String MAVEN_IMAGE =
+      System.getenv().getOrDefault("LEGACY_PILOT_MAVEN_IMAGE", DockerSandbox.DEFAULT_MAVEN_IMAGE);
+
   @TempDir Path temporary;
 
   @Test
   void runsMavenInARealDockerContainerWhenDaemonAndImageAreAvailable() throws Exception {
-    var sandbox = DockerSandbox.secureMavenDefaults();
+    var sandbox = new DockerSandbox(Set.of(MAVEN_IMAGE), Set.of("mvn"), Set.of());
     assumeTrue(sandbox.available(), "Docker daemon is not available");
-    var inspect =
-        new ProcessBuilder("docker", "image", "inspect", DockerSandbox.DEFAULT_MAVEN_IMAGE).start();
+    var inspect = new ProcessBuilder("docker", "image", "inspect", MAVEN_IMAGE).start();
     assumeTrue(inspect.waitFor() == 0, "Pinned Maven image is not present locally");
     var request =
         new SandboxRequest(
             "integration",
-            DockerSandbox.DEFAULT_MAVEN_IMAGE,
+            MAVEN_IMAGE,
             Path.of("."),
             null,
             List.of("mvn", "--version"),
@@ -36,15 +38,14 @@ class DockerSandboxIntegrationTest {
 
   @Test
   void prewarmsDependenciesThenRunsBankingTestsOfflineWhenDockerIsAvailable() throws Exception {
-    var probe = DockerSandbox.secureMavenDefaults();
+    var probe = new DockerSandbox(Set.of(MAVEN_IMAGE), Set.of("mvn"), Set.of());
     assumeTrue(probe.available(), "Docker daemon is not available");
-    var inspect =
-        new ProcessBuilder("docker", "image", "inspect", DockerSandbox.DEFAULT_MAVEN_IMAGE).start();
+    var inspect = new ProcessBuilder("docker", "image", "inspect", MAVEN_IMAGE).start();
     assumeTrue(inspect.waitFor() == 0, "Pinned Maven image is not present locally");
     var sandbox =
         new DockerSandbox(
             "docker",
-            DockerImagePolicy.allowlisted(Set.of(DockerSandbox.DEFAULT_MAVEN_IMAGE)),
+            DockerImagePolicy.allowlisted(Set.of(MAVEN_IMAGE)),
             Set.of("mvn"),
             Set.of(),
             true);
@@ -53,14 +54,14 @@ class DockerSandboxIntegrationTest {
         new DependencyCacheManager(
             Files.createDirectory(temporary.resolve("caches")), 2L * 1024 * 1024 * 1024);
     var provisioned =
-        new MavenDependencyProvisioner(sandbox, caches, DockerSandbox.DEFAULT_MAVEN_IMAGE)
+        new MavenDependencyProvisioner(sandbox, caches, MAVEN_IMAGE)
             .prewarm(fixture, SandboxLimits.safeDefaults());
     assertTrue(provisioned.result().successful(), provisioned.result().output());
     var offline =
         sandbox.execute(
             new SandboxRequest(
                 "banking-offline",
-                DockerSandbox.DEFAULT_MAVEN_IMAGE,
+                MAVEN_IMAGE,
                 fixture,
                 provisioned.path(),
                 List.of(

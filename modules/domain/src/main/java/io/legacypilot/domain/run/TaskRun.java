@@ -27,15 +27,25 @@ public final class TaskRun {
           EnumSet.of(
               RunStatus.WAITING_FOR_APPROVAL,
               RunStatus.EXECUTING,
+              RunStatus.NEEDS_REVIEW,
               RunStatus.RECOVERING,
               RunStatus.FAILED,
               RunStatus.CANCELLED),
           RunStatus.WAITING_FOR_APPROVAL,
           EnumSet.of(
-              RunStatus.EXECUTING, RunStatus.RECOVERING, RunStatus.FAILED, RunStatus.CANCELLED),
+              RunStatus.EXECUTING,
+              RunStatus.NEEDS_REVIEW,
+              RunStatus.RECOVERING,
+              RunStatus.FAILED,
+              RunStatus.CANCELLED),
           RunStatus.EXECUTING,
           EnumSet.of(
-              RunStatus.VERIFYING, RunStatus.RECOVERING, RunStatus.FAILED, RunStatus.CANCELLED),
+              RunStatus.WAITING_FOR_APPROVAL,
+              RunStatus.VERIFYING,
+              RunStatus.NEEDS_REVIEW,
+              RunStatus.RECOVERING,
+              RunStatus.FAILED,
+              RunStatus.CANCELLED),
           RunStatus.VERIFYING,
           EnumSet.of(
               RunStatus.EXECUTING,
@@ -43,6 +53,9 @@ public final class TaskRun {
               RunStatus.RECOVERING,
               RunStatus.FAILED,
               RunStatus.CANCELLED),
+          RunStatus.NEEDS_REVIEW,
+          EnumSet.of(
+              RunStatus.EXECUTING, RunStatus.RECOVERING, RunStatus.FAILED, RunStatus.CANCELLED),
           RunStatus.RECOVERING,
           EnumSet.of(RunStatus.FAILED, RunStatus.CANCELLED));
 

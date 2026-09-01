@@ -35,6 +35,7 @@ public final class MavenTool implements AgentTool {
   private final Set<String> allowedProfiles;
   private final Set<String> allowedProperties;
   private final SandboxLimits limits;
+  private final String image;
 
   private MavenTool(
       String name,
@@ -45,7 +46,8 @@ public final class MavenTool implements AgentTool {
       boolean requiresTestClass,
       Set<String> allowedProfiles,
       Set<String> allowedProperties,
-      SandboxLimits limits) {
+      SandboxLimits limits,
+      String image) {
     this.sandbox = sandbox;
     this.dependencyCache = dependencyCache;
     this.goals = List.copyOf(goals);
@@ -53,6 +55,10 @@ public final class MavenTool implements AgentTool {
     this.allowedProfiles = Set.copyOf(allowedProfiles);
     this.allowedProperties = Set.copyOf(allowedProperties);
     this.limits = limits;
+    this.image = java.util.Objects.requireNonNull(image);
+    if (image.isBlank()) {
+      throw new IllegalArgumentException("Maven sandbox image is required");
+    }
     var required = requiresTestClass ? "[\"testClass\"]" : "[]";
     this.descriptor =
         new ToolDescriptor(
@@ -81,6 +87,16 @@ public final class MavenTool implements AgentTool {
       Set<String> profiles,
       Set<String> properties,
       SandboxLimits limits) {
+    return compile(sandbox, cache, profiles, properties, limits, DockerSandbox.DEFAULT_MAVEN_IMAGE);
+  }
+
+  public static MavenTool compile(
+      SandboxExecutor sandbox,
+      Path cache,
+      Set<String> profiles,
+      Set<String> properties,
+      SandboxLimits limits,
+      String image) {
     return new MavenTool(
         "compile_project",
         "Compile the project in the offline Docker sandbox.",
@@ -90,7 +106,8 @@ public final class MavenTool implements AgentTool {
         false,
         profiles,
         properties,
-        limits);
+        limits,
+        image);
   }
 
   public static MavenTool tests(
@@ -99,6 +116,16 @@ public final class MavenTool implements AgentTool {
       Set<String> profiles,
       Set<String> properties,
       SandboxLimits limits) {
+    return tests(sandbox, cache, profiles, properties, limits, DockerSandbox.DEFAULT_MAVEN_IMAGE);
+  }
+
+  public static MavenTool tests(
+      SandboxExecutor sandbox,
+      Path cache,
+      Set<String> profiles,
+      Set<String> properties,
+      SandboxLimits limits,
+      String image) {
     return new MavenTool(
         "run_tests",
         "Run the project test suite in the offline Docker sandbox.",
@@ -108,7 +135,8 @@ public final class MavenTool implements AgentTool {
         false,
         profiles,
         properties,
-        limits);
+        limits,
+        image);
   }
 
   public static MavenTool testClass(
@@ -117,6 +145,17 @@ public final class MavenTool implements AgentTool {
       Set<String> profiles,
       Set<String> properties,
       SandboxLimits limits) {
+    return testClass(
+        sandbox, cache, profiles, properties, limits, DockerSandbox.DEFAULT_MAVEN_IMAGE);
+  }
+
+  public static MavenTool testClass(
+      SandboxExecutor sandbox,
+      Path cache,
+      Set<String> profiles,
+      Set<String> properties,
+      SandboxLimits limits,
+      String image) {
     return new MavenTool(
         "run_test_class",
         "Run one allowlisted test selector in the offline Docker sandbox.",
@@ -126,7 +165,8 @@ public final class MavenTool implements AgentTool {
         true,
         profiles,
         properties,
-        limits);
+        limits,
+        image);
   }
 
   public static MavenTool staticAnalysis(
@@ -135,6 +175,17 @@ public final class MavenTool implements AgentTool {
       Set<String> profiles,
       Set<String> properties,
       SandboxLimits limits) {
+    return staticAnalysis(
+        sandbox, cache, profiles, properties, limits, DockerSandbox.DEFAULT_MAVEN_IMAGE);
+  }
+
+  public static MavenTool staticAnalysis(
+      SandboxExecutor sandbox,
+      Path cache,
+      Set<String> profiles,
+      Set<String> properties,
+      SandboxLimits limits,
+      String image) {
     return new MavenTool(
         "static_analysis",
         "Run configured Checkstyle and SpotBugs checks in the offline Docker sandbox.",
@@ -144,7 +195,8 @@ public final class MavenTool implements AgentTool {
         false,
         profiles,
         properties,
-        limits);
+        limits,
+        image);
   }
 
   @Override
@@ -159,7 +211,7 @@ public final class MavenTool implements AgentTool {
     var request =
         new SandboxRequest(
             executionId,
-            DockerSandbox.DEFAULT_MAVEN_IMAGE,
+            image,
             context.workspaceRoot(),
             dependencyCache,
             command,

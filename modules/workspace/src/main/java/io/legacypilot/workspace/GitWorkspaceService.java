@@ -86,6 +86,27 @@ public final class GitWorkspaceService implements WorkspaceService {
   }
 
   @Override
+  public WorkspaceDescriptor open(Project project, RunId runId, WorkspaceId workspaceId) {
+    Objects.requireNonNull(project, "project must not be null");
+    Objects.requireNonNull(runId, "run id must not be null");
+    Objects.requireNonNull(workspaceId, "workspace id must not be null");
+    if (!workspaceId.value().equals(runId.value())) {
+      throw new WorkspaceException("Workspace does not belong to the requested run");
+    }
+    requireSafeId(workspaceId.value());
+    var workspacePath = managedChild(worktreeRoot, workspaceId.value());
+    if (Files.notExists(workspacePath)) {
+      throw new WorkspaceException("Managed workspace does not exist");
+    }
+    verifyMarker(workspacePath, runId);
+    var actualRevision = git.run(workspacePath, List.of("rev-parse", "--verify", "HEAD^{commit}"));
+    if (!actualRevision.equalsIgnoreCase(project.baseRevision().value())) {
+      throw new WorkspaceException("Existing workspace is pinned to a different revision");
+    }
+    return new WorkspaceDescriptor(workspaceId, workspacePath.toString());
+  }
+
+  @Override
   public void cleanup(Project project, RunId runId, WorkspaceId workspaceId) {
     if (!workspaceId.value().equals(runId.value())) {
       throw new WorkspaceException("Workspace does not belong to the requested run");

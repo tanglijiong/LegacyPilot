@@ -42,10 +42,20 @@ class GitWorkspaceServiceTest {
     assertEquals(
         registered.revision().value(), git(Path.of(workspace.path()), "rev-parse", "HEAD"));
     assertEquals(workspace, service.create(project, runId));
+    assertEquals(workspace, service.open(project, runId, workspace.id()));
 
     Files.writeString(source.resolve("second.txt"), "new branch content\n");
     git(source, "add", "second.txt");
     git(source, "commit", "-m", "move source branch");
+    var moved = service.register(new RepositoryLocation(source.toString()), "HEAD");
+    var movedProject =
+        new Project(
+            new ProjectId("project-moved"),
+            new RepositoryLocation(source.toString()),
+            moved.repositoryPath(),
+            moved.revision(),
+            Instant.EPOCH);
+    assertThrows(WorkspaceException.class, () -> service.open(movedProject, runId, workspace.id()));
     var secondWorkspace = service.create(project, new RunId("run-2"));
     assertFalse(workspace.path().equals(secondWorkspace.path()));
     assertEquals(
@@ -113,9 +123,20 @@ class GitWorkspaceServiceTest {
     assertThrows(
         WorkspaceException.class,
         () ->
+            service.open(
+                project, new RunId("another-run"), new WorkspaceId(workspace.id().value())));
+    assertThrows(
+        WorkspaceException.class,
+        () -> service.open(project, new RunId("missing-run"), new WorkspaceId("missing-run")));
+    assertThrows(
+        WorkspaceException.class,
+        () ->
             service.cleanup(
                 project, new RunId("another-run"), new WorkspaceId(workspace.id().value())));
     Files.writeString(Path.of(workspace.path()).resolve(".legacypilot-workspace"), "wrong\n");
+    assertThrows(
+        WorkspaceException.class,
+        () -> service.open(project, new RunId("run-marker"), workspace.id()));
     assertThrows(
         WorkspaceException.class,
         () -> service.cleanup(project, new RunId("run-marker"), workspace.id()));

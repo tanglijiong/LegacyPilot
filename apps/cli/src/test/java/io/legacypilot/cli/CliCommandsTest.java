@@ -26,6 +26,13 @@ import io.legacypilot.domain.task.AcceptanceCriteria;
 import io.legacypilot.domain.task.Requirement;
 import io.legacypilot.domain.task.Task;
 import io.legacypilot.domain.task.TaskId;
+import io.legacypilot.eval.EvalAttemptCheckpoint;
+import io.legacypilot.eval.EvalExperimentBudget;
+import io.legacypilot.eval.EvalExperimentCheckpoint;
+import io.legacypilot.eval.EvalExperimentManifest;
+import io.legacypilot.eval.EvalExperimentStore;
+import io.legacypilot.eval.EvalPricingSnapshot;
+import io.legacypilot.eval.EvalTaskResult;
 import io.legacypilot.model.ModelUsage;
 import io.legacypilot.observability.InMemoryTraceSink;
 import io.legacypilot.observability.SensitiveDataRedactor;
@@ -41,13 +48,17 @@ import io.legacypilot.runtime.RuntimeApproval;
 import io.legacypilot.runtime.RuntimeStatus;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -234,6 +245,34 @@ class CliCommandsTest {
                             "2")));
     assertTrue(text.contains("reference-ceiling"));
     assertTrue(text.contains("\"status\":\"PASSED\""));
+  }
+
+  @Test
+  void comparesCompletedExperimentsAndWritesOfflineEvidence() {
+    var mapper = new ObjectMapper().findAndRegisterModules();
+    var baseline = new EvalExperimentStore(temporary.resolve("baseline"), mapper);
+    var candidate = new EvalExperimentStore(temporary.resolve("candidate"), mapper);
+    createExperiment(baseline, "baseline", false);
+    createExperiment(candidate, "candidate", true);
+    var evidence = temporary.resolve("evidence");
+
+    var result =
+        captureResult(
+            () ->
+                new CommandLine(new EvalCompareCommand(mapper, new JsonOutput(mapper)))
+                    .execute(
+                        "--baseline",
+                        baseline.root().toString(),
+                        "--candidate",
+                        candidate.root().toString(),
+                        "--output",
+                        evidence.toString()));
+
+    assertEquals(0, result.exitCode());
+    assertTrue(result.text().contains("\"passed\":true"));
+    assertTrue(Files.exists(evidence.resolve("comparison.json")));
+    assertTrue(Files.exists(evidence.resolve("report.md")));
+    assertTrue(Files.exists(evidence.resolve("dashboard.html")));
   }
 
   @Test
@@ -608,6 +647,54 @@ class CliCommandsTest {
         new Requirement("work"),
         new AcceptanceCriteria(List.of("tests")),
         NOW);
+  }
+
+  private static void createExperiment(
+      EvalExperimentStore store, String runId, boolean secondTaskPassed) {
+    store.createManifest(
+        new EvalExperimentManifest(
+            "eval-experiment-v1",
+            runId,
+            "abcdef1",
+            "dataset-v1",
+            "a".repeat(64),
+            "model",
+            "high",
+            "prompt-v1",
+            "b".repeat(64),
+            "policy-v1",
+            new EvalPricingSnapshot(
+                "USD", "per-1m-tokens", BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, "test"),
+            Map.of(),
+            new EvalExperimentBudget(BigDecimal.TEN, Duration.ofHours(1), 1000, 1, 1),
+            List.of("task-001", "task-002"),
+            NOW));
+    var attempts = new LinkedHashMap<String, EvalAttemptCheckpoint>();
+    attempts.put("task-001", completedAttempt(runId, "task-001", true));
+    attempts.put("task-002", completedAttempt(runId, "task-002", secondTaskPassed));
+    store.save(
+        new EvalExperimentCheckpoint(
+            runId, EvalExperimentCheckpoint.Status.COMPLETED, attempts, NOW));
+  }
+
+  private static EvalAttemptCheckpoint completedAttempt(
+      String runId, String taskId, boolean passed) {
+    var result =
+        new EvalTaskResult(
+            taskId,
+            passed ? EvalTaskResult.Status.PASSED : EvalTaskResult.Status.FAILED,
+            passed ? 1 : 0,
+            1,
+            true,
+            passed,
+            1,
+            1,
+            10,
+            BigDecimal.ZERO,
+            Duration.ofSeconds(1),
+            List.of(),
+            passed ? "" : "tests failed");
+    return EvalAttemptCheckpoint.pending(runId, taskId).running(NOW).completed(result, NOW);
   }
 
   private static String[] providerStartArguments(

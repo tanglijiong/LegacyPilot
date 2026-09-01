@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 
 class CapabilityControllerTest {
   @Test
@@ -36,7 +37,10 @@ class CapabilityControllerTest {
                 "a".repeat(64),
                 "",
                 now.plusSeconds(60),
-                1));
+                1),
+            UsernamePasswordAuthenticationToken.authenticated(
+                "admin-a", "n/a", java.util.List.of()));
+    assertEquals("admin-a", issued.capability().subject());
     assertEquals(1, controller.list().size());
     assertEquals(issued.capability(), controller.find(issued.capability().id()));
     assertTrue(controller.revoke(issued.capability().id()).revoked());

@@ -1,5 +1,6 @@
 package io.legacypilot.server.api;
 
+import io.legacypilot.application.error.ResourceNotFoundException;
 import io.legacypilot.observability.ReportStore;
 import io.legacypilot.observability.RunReport;
 import io.legacypilot.runtime.AgentCheckpoint;
@@ -12,8 +13,10 @@ import io.legacypilot.runtime.CheckpointStore;
 import io.legacypilot.runtime.RecoveryCoordinator;
 import io.legacypilot.runtime.RecoveryOutcome;
 import io.legacypilot.runtime.RuntimeApproval;
+import io.legacypilot.server.security.RunSecurityContextStore;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,22 +33,26 @@ public class AgentRuntimeController {
   private final ApprovalStore approvals;
   private final ReportStore reports;
   private final RecoveryCoordinator recovery;
+  private final RunSecurityContextStore securityContexts;
 
   public AgentRuntimeController(
       AgentRuntime runtime,
       CheckpointStore checkpoints,
       ApprovalStore approvals,
       ReportStore reports,
-      RecoveryCoordinator recovery) {
+      RecoveryCoordinator recovery,
+      RunSecurityContextStore securityContexts) {
     this.runtime = runtime;
     this.checkpoints = checkpoints;
     this.approvals = approvals;
     this.reports = reports;
     this.recovery = recovery;
+    this.securityContexts = securityContexts;
   }
 
   @PostMapping
-  AgentRuntimeResult execute(@RequestBody AgentRunRequest request) {
+  AgentRuntimeResult execute(@RequestBody AgentRunRequest request, Authentication authentication) {
+    securityContexts.recordInitiator(request.runId(), authentication.getName());
     return runtime.execute(request);
   }
 
@@ -53,17 +60,22 @@ public class AgentRuntimeController {
   AgentCheckpoint checkpoint(@PathVariable String runId) {
     return checkpoints
         .load(runId)
-        .orElseThrow(() -> new IllegalArgumentException("agent run was not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("agent run", runId));
   }
 
   @PostMapping("/{runId}/approvals")
-  AgentCheckpoint approve(@PathVariable String runId, @RequestBody SubmitApprovalRequest request) {
+  AgentCheckpoint approve(
+      @PathVariable String runId,
+      @RequestBody SubmitApprovalRequest request,
+      Authentication authentication) {
+    var actor = authentication.getName();
+    securityContexts.requireIndependentApprover(runId, actor);
     approvals.save(
         new RuntimeApproval(
             runId,
             request.actionDigest(),
             request.planDigest(),
-            request.actor(),
+            actor,
             request.decision(),
             request.scope(),
             request.reason(),
@@ -85,7 +97,7 @@ public class AgentRuntimeController {
   RunReport report(@PathVariable String runId) {
     return reports
         .load(runId)
-        .orElseThrow(() -> new IllegalArgumentException("agent run report was not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("agent run report", runId));
   }
 
   public record SubmitApprovalRequest(

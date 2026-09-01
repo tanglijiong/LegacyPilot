@@ -118,6 +118,27 @@ class JdbcRepositoriesTest {
             .orElseThrow());
   }
 
+  @Test
+  void upgradesAReleasedV02DatabaseWithoutChangingTheV1Checksum() {
+    var dataSource = dataSource("jdbc:h2:mem:v02-upgrade;DB_CLOSE_DELAY=-1");
+    assertEquals(
+        1,
+        Flyway.configure()
+            .dataSource(dataSource)
+            .locations("classpath:db/v0.2")
+            .load()
+            .migrate()
+            .migrationsExecuted);
+
+    assertEquals(1, Flyway.configure().dataSource(dataSource).load().migrate().migrationsExecuted);
+    assertEquals(
+        0,
+        JdbcClient.create(dataSource)
+            .sql("SELECT COUNT(*) FROM run_security_context")
+            .query(Integer.class)
+            .single());
+  }
+
   private Project seedProject() {
     var project =
         new Project(

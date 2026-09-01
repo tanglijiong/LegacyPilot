@@ -25,3 +25,6 @@ legacy-pilot:
     lease-ttl: ${LEGACY_PILOT_AGENT_LEASE_TTL:2m}
     memory:
       maximum-entries: ${LEGACY_PILOT_AGENT_MEMORY_MAXIMUM_ENTRIES:5000}
+  sandbox:
+    maven-image: ${LEGACY_PILOT_MAVEN_IMAGE:maven:3.9.16-eclipse-temurin-21}
+    digest-required: ${LEGACY_PILOT_SANDBOX_DIGEST_REQUIRED:false}

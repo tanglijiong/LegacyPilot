@@ -174,6 +174,11 @@ class LifecycleUseCasesTest {
     }
 
     @Override
+    public WorkspaceDescriptor open(Project project, RunId runId, WorkspaceId workspaceId) {
+      return new WorkspaceDescriptor(workspaceId, "/work/" + runId.value());
+    }
+
+    @Override
     public void cleanup(Project project, RunId runId, WorkspaceId workspaceId) {
       cleanupCount++;
     }

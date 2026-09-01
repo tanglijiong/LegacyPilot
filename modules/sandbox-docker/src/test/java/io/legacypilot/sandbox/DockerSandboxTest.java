@@ -258,6 +258,9 @@ class DockerSandboxTest {
                 limits(Duration.ofSeconds(1), 4096, 10_000_000)));
     assertEquals("none", offline.get(offline.indexOf("--network") + 1));
     assertTrue(offline.stream().anyMatch(value -> value.endsWith("dst=/maven-cache,readonly")));
+    assertTrue(offline.contains("/tmp:rw,noexec,nosuid,nodev,size=1048576"));
+    assertTrue(offline.contains("/jansi-tmp:rw,exec,nosuid,nodev,size=16777216"));
+    assertTrue(offline.stream().anyMatch(value -> value.contains("-Djansi.tmpdir=/jansi-tmp")));
     assertFalse(offline.contains("--privileged"));
     assertFalse(offline.contains("host"));
     assertThrows(
@@ -338,9 +341,50 @@ class DockerSandboxTest {
     assertTrue(provisioned.result().successful());
     assertEquals(provisioned.path(), captured.get().dependencyCache());
     assertEquals(SandboxPhase.DEPENDENCY_PREWARM, captured.get().phase());
-    assertTrue(captured.get().command().contains("dependency:go-offline"));
     assertTrue(captured.get().command().contains("test"));
     assertTrue(captured.get().command().contains("-Dgroups=__LegacyPilotDependencyPrewarm__"));
+  }
+
+  @Test
+  void retriesAFailedDependencyPrewarmAgainstTheSameContentAddressedCache() throws Exception {
+    var workspace = Files.createDirectory(temporary.resolve("retry-prewarm-workspace"));
+    Files.writeString(workspace.resolve("pom.xml"), "<project/>");
+    var attempts = new java.util.concurrent.atomic.AtomicInteger();
+    var caches = new java.util.ArrayList<Path>();
+    SandboxExecutor executor =
+        new SandboxExecutor() {
+          @Override
+          public SandboxResult execute(SandboxRequest request) {
+            caches.add(request.dependencyCache());
+            var attempt = attempts.incrementAndGet();
+            return new SandboxResult(
+                request.executionId(),
+                attempt == 1 ? SandboxStatus.FAILED : SandboxStatus.SUCCESS,
+                attempt == 1 ? 1 : 0,
+                attempt == 1 ? "transient transfer failure" : "ready",
+                Duration.ZERO,
+                false);
+          }
+
+          @Override
+          public boolean cancel(String executionId) {
+            return false;
+          }
+
+          @Override
+          public boolean available() {
+            return true;
+          }
+        };
+    var provisioned =
+        new MavenDependencyProvisioner(
+                executor,
+                new DependencyCacheManager(temporary.resolve("retry-prewarm-caches"), 10_000_000),
+                "image:1")
+            .prewarm(workspace, limits(Duration.ofSeconds(1), 4096, 10_000_000));
+    assertTrue(provisioned.result().successful());
+    assertEquals(2, attempts.get());
+    assertEquals(caches.getFirst(), caches.getLast());
   }
 
   private DockerSandbox sandbox(Path executable) {
