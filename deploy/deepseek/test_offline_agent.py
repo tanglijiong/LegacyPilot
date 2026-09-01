@@ -101,6 +101,12 @@ class OfflineAgentTest(unittest.TestCase):
             self.assertTrue((workspace / "src/main/java/example/Value.java").is_file())
             with self.assertRaises(ValueError):
                 model_agent.apply_files(
+                    workspace,
+                    payload,
+                    ["src/main/java/example/Another.java"],
+                )
+            with self.assertRaises(ValueError):
+                model_agent.apply_files(
                     workspace, {"files": [{"path": "pom.xml", "content": "unsafe"}]}
                 )
             (workspace / "src/main/java/escape").symlink_to(workspace / "pom.xml")
@@ -115,6 +121,27 @@ class OfflineAgentTest(unittest.TestCase):
         self.assertEqual({"files": []}, model_agent.response_object(response))
         with self.assertRaises(ValueError):
             model_agent.response_object({})
+
+    def test_reports_public_acceptance_failures(self):
+        with tempfile.TemporaryDirectory() as root:
+            workspace = Path(root)
+            target = workspace / "src/main/java/example/Value.java"
+            target.parent.mkdir(parents=True)
+            target.write_text('final class Value { static final String CODE = "OK"; }\n', "utf-8")
+            checks = [
+                "FILE_EXISTS src/main/java/example/Value.java",
+                "CONTAINS src/main/java/example/Value.java => CODE",
+                "MATCHES_REGEX src/main/java/example/Value.java => String\\s+CODE",
+                "NOT_CONTAINS src/main/java/example/Value.java => INVALID",
+                "CONTAINS src/main/java/example/Value.java => MISSING",
+            ]
+
+            self.assertEqual(
+                [
+                    "CONTAINS failed for src/main/java/example/Value.java: MISSING"
+                ],
+                model_agent.public_failures(workspace, checks),
+            )
 
     def test_service_command_is_pinned_and_networkless(self):
         with tempfile.TemporaryDirectory() as root:

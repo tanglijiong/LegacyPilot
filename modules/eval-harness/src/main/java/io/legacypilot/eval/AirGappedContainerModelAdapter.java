@@ -43,7 +43,15 @@ public final class AirGappedContainerModelAdapter implements EvalModelAdapter {
             "airgap-container",
             NetworkBoundary.AIR_GAPPED,
             (workspace, task) ->
-                command(docker, image, agentCommand, model, reasoningEffort, config, workspace),
+                command(
+                    docker,
+                    image,
+                    agentCommand,
+                    model,
+                    reasoningEffort,
+                    config,
+                    workspace,
+                    task),
             mapper);
   }
 
@@ -91,6 +99,18 @@ public final class AirGappedContainerModelAdapter implements EvalModelAdapter {
       String reasoningEffort,
       AirGappedContainerConfig config,
       Path workspace) {
+    return command(docker, image, agentCommand, model, reasoningEffort, config, workspace, null);
+  }
+
+  private static List<String> command(
+      Path docker,
+      String image,
+      String agentCommand,
+      String model,
+      String reasoningEffort,
+      AirGappedContainerConfig config,
+      Path workspace,
+      EvalTask task) {
     var normalized = workspace.toAbsolutePath().normalize();
     if (!Files.isDirectory(normalized)
         || normalized.toString().indexOf(',') >= 0
@@ -151,6 +171,24 @@ public final class AirGappedContainerModelAdapter implements EvalModelAdapter {
             "--reasoning-effort",
             reasoningEffort,
             "--jsonl"));
+    if (task != null) {
+      task.allowedFiles()
+          .forEach(
+              path -> {
+                command.add("--allowed-file");
+                command.add(path);
+              });
+      task.assertions()
+          .forEach(
+              assertion -> {
+                command.add("--acceptance");
+                command.add(
+                    assertion.type()
+                        + " "
+                        + assertion.path()
+                        + (assertion.value().isBlank() ? "" : " => " + assertion.value()));
+              });
+    }
     return List.copyOf(command);
   }
 }

@@ -8,6 +8,7 @@ import http.client
 import json
 import os
 from pathlib import Path
+import re
 import socket
 import subprocess
 import sys
@@ -184,8 +185,8 @@ def completion(
     allowed_files: list[str],
     acceptance: list[str],
 ) -> dict:
-    allowed = "\n".join(f"- {path}" for path in allowed_files)
-    checks = "\n".join(f"- {check}" for check in acceptance)
+    allowed = "\n".join(f"- {path}" for path in allowed_files) or "- production source files only"
+    checks = "\n".join(f"- {check}" for check in acceptance) or "- compile and pass tests"
     system = (
         "You are a Java 21 maintenance agent running in a local offline environment. "
         "Return only one JSON object with a files array. Each item must contain path and the "
@@ -250,7 +251,7 @@ def safe_target(workspace: Path, raw: str) -> Path:
     return target
 
 
-def apply_files(workspace: Path, payload: dict) -> int:
+def apply_files(workspace: Path, payload: dict, allowed_files: list[str] | None = None) -> int:
     files = payload.get("files")
     if not isinstance(files, list) or not files or len(files) > MAX_CHANGED_FILES:
         raise ValueError("model patch file count is invalid")
@@ -260,7 +261,10 @@ def apply_files(workspace: Path, payload: dict) -> int:
     for item in files:
         if not isinstance(item, dict) or not isinstance(item.get("content"), str):
             raise ValueError("model patch entry is invalid")
-        target = safe_target(workspace, item.get("path"))
+        raw_path = item.get("path")
+        if allowed_files and raw_path not in allowed_files:
+            raise ValueError("model attempted to write a file outside the task scope")
+        target = safe_target(workspace, raw_path)
         if target in targets:
             raise ValueError("model returned the same file more than once")
         targets.add(target)
@@ -283,6 +287,59 @@ def apply_files(workspace: Path, payload: dict) -> int:
                 os.unlink(temporary)
         print(json.dumps({"type": "item.completed", "path": target.relative_to(workspace).as_posix()}))
     return len(prepared)
+
+
+def public_failures(workspace: Path, checks: list[str]) -> list[str]:
+    failures: list[str] = []
+    for check in checks:
+        check_type, _, remainder = check.partition(" ")
+        raw_path, separator, expected = remainder.partition(" => ")
+        path = workspace / raw_path
+        content = path.read_text("utf-8", errors="replace") if path.is_file() else ""
+        passed = False
+        if check_type == "FILE_EXISTS":
+            passed = path.is_file()
+        elif check_type == "FILE_NOT_EXISTS":
+            passed = not path.exists()
+        elif check_type == "CONTAINS" and separator:
+            passed = expected in content
+        elif check_type == "NOT_CONTAINS" and separator:
+            passed = expected not in content
+        elif check_type == "MATCHES_REGEX" and separator:
+            passed = re.search(expected, content) is not None
+        elif check_type == "NOT_MATCHES_REGEX" and separator:
+            passed = re.search(expected, content) is None
+        if not passed:
+            failures.append(f"{check_type} failed for {raw_path}: {expected}".rstrip())
+    return failures
+
+
+def build_failures(workspace: Path) -> list[str]:
+    wrapper = workspace / "mvnw"
+    if not wrapper.is_file():
+        return []
+    try:
+        result = subprocess.run(
+            [str(wrapper), "--batch-mode", "--no-transfer-progress", "test"],
+            cwd=workspace,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=90,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return [f"Maven verification could not complete: {error}"]
+    if result.returncode == 0:
+        return []
+    output = result.stdout.decode("utf-8", errors="replace")[-6000:]
+    return [f"Maven verification failed:\n{output}"]
+
+
+def add_usage(total: dict[str, int], response: dict) -> None:
+    usage = response.get("usage") or {}
+    total["input_tokens"] += max(0, int(usage.get("prompt_tokens", 0)))
+    total["output_tokens"] += max(0, int(usage.get("completion_tokens", 0)))
+    total["reasoning_output_tokens"] += max(0, int(usage.get("reasoning_tokens", 0)))
 
 
 def main() -> int:
@@ -308,21 +365,35 @@ def main() -> int:
         else:
             process, log_path = start_server(Path(args.model).resolve(), args.served_model_name)
             wait_until_ready(process, log_path)
-        response = completion(
-            prompt,
-            source_context(workspace),
-            args.served_model_name,
-            args.allowed_file,
-            args.acceptance,
-        )
-        apply_files(workspace, response_object(response))
-        usage = response.get("usage") or {}
-        output_tokens = max(0, int(usage.get("completion_tokens", 0)))
-        reasoning_tokens = min(output_tokens, max(0, int(usage.get("reasoning_tokens", 0))))
+        usage = {"input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
+        feedback = ""
+        for attempt in range(2):
+            response = completion(
+                prompt + feedback,
+                source_context(workspace),
+                args.served_model_name,
+                args.allowed_file,
+                args.acceptance,
+            )
+            add_usage(usage, response)
+            try:
+                apply_files(workspace, response_object(response), args.allowed_file)
+                failures = public_failures(workspace, args.acceptance) + build_failures(workspace)
+            except (ValueError, OSError, json.JSONDecodeError) as error:
+                failures = [f"Patch application failed: {error}"]
+            if not failures or attempt == 1:
+                break
+            feedback = (
+                "\n\nYour previous patch failed public verification. Fix the current workspace and "
+                "return complete replacement content again. Do not explain. Failures:\n- "
+                + "\n- ".join(failures)
+            )
+        output_tokens = usage["output_tokens"]
+        reasoning_tokens = min(output_tokens, usage["reasoning_output_tokens"])
         event = {
             "type": "turn.completed",
             "usage": {
-                "input_tokens": max(0, int(usage.get("prompt_tokens", 0))),
+                "input_tokens": usage["input_tokens"],
                 "cached_input_tokens": 0,
                 "output_tokens": output_tokens,
                 "reasoning_output_tokens": reasoning_tokens,
