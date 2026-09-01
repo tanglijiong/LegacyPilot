@@ -20,7 +20,8 @@ import urllib.request
 
 HOST = "127.0.0.1"
 PORT = 8000
-MAX_CONTEXT_BYTES = 300_000
+# Keeps the prompt plus an 8K-token patch response within a 32K local context window.
+MAX_CONTEXT_BYTES = 80_000
 MAX_FILE_BYTES = 64_000
 MAX_CHANGED_FILES = 12
 MAX_CHANGED_BYTES = 1_000_000
