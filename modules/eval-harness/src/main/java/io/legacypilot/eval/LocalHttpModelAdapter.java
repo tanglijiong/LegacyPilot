@@ -69,6 +69,12 @@ public final class LocalHttpModelAdapter implements EvalModelAdapter {
               command.add("--allowed-file");
               command.add(path);
             });
+    task.expectedFiles()
+        .forEach(
+            path -> {
+              command.add("--required-file");
+              command.add(path);
+            });
     task.assertions()
         .forEach(
             assertion -> {

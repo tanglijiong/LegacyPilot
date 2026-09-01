@@ -49,6 +49,7 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--served-model-name", required=True)
     parser.add_argument("--reasoning-effort", required=True)
     parser.add_argument("--allowed-file", action="append", default=[])
+    parser.add_argument("--required-file", action="append", default=[])
     parser.add_argument("--acceptance", action="append", default=[])
     parser.add_argument("--jsonl", action="store_true", required=True)
     return parser.parse_args()
@@ -184,9 +185,12 @@ def completion(
     context: str,
     served_name: str,
     allowed_files: list[str],
+    required_files: list[str],
     acceptance: list[str],
+    feedback: str,
 ) -> dict:
     allowed = "\n".join(f"- {path}" for path in allowed_files) or "- production source files only"
+    required = "\n".join(f"- {path}" for path in required_files) or "- none specified"
     check_lines: list[str] = []
     for check in acceptance:
         check_type, _, remainder = check.partition(" ")
@@ -218,8 +222,11 @@ def completion(
                 "role": "user",
                 "content": (
                     f"{prompt}\n\nALLOWED PRODUCTION FILES:\n{allowed}"
+                    f"\n\nREQUIRED CHANGED OR CREATED FILES:\n{required}"
                     f"\n\nPUBLIC ACCEPTANCE CHECKS:\n{checks}"
                     f"\n\nWORKSPACE SOURCE:\n{context}"
+                    f"\n\nFINAL NON-NEGOTIABLE CHECKLIST:\n{checks}"
+                    f"\nEvery required file must be returned with complete content.{feedback}"
                 ),
             },
         ],
@@ -384,11 +391,13 @@ def main() -> int:
         for attempt in range(2):
             try:
                 response = completion(
-                    prompt + feedback,
+                    prompt,
                     source_context(workspace),
                     args.served_model_name,
                     args.allowed_file,
+                    args.required_file,
                     args.acceptance,
+                    feedback,
                 )
                 add_usage(usage, response)
                 apply_files(workspace, response_object(response), args.allowed_file)
