@@ -219,7 +219,10 @@ def completion(
         "complete, compilable replacement content including package, imports, and enclosing type. "
         "Never return a fragment. Change only the explicitly allowed production files. Never "
         "change tests, pom.xml, build output, or unrelated files. Satisfy every public acceptance "
-        "check exactly, including named constants and error codes. Create every required new file."
+        "check exactly, including named constants and error codes. An exact error-code token must "
+        "be used as an exception message or named constant, not paraphrased. An exact Java member "
+        "such as ZoneOffset.UTC must be used in executable code with the necessary import. Create "
+        "every required new file."
     )
     payload = {
         "model": served_name,
