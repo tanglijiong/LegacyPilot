@@ -19,6 +19,12 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 
 要求：全量构建和静态检查通过；两项 Maven sandbox 与一项 PostgreSQL 真实 Docker 集成测试不得跳过；DeepSeek 契约测试通过；reference ceiling 为 20/20。Reference ceiling 只验证数据集，不能替代真实模型基线。证据摘要必须覆盖全部受版本控制的应用、部署、文档、评测和构建配置，以及最终构建的 JAR，而不只覆盖少数文件扩展名。
 
+DeepSeek 离线 Agent 契约测试必须从仓库根目录以文件入口执行，确保同目录的 `model_agent.py` 可被加载：
+
+```bash
+python3 deploy/deepseek/test_offline_agent.py
+```
+
 `build-evidence.sh` 会检查两份必需的集成测试报告；测试未执行、失败、报错或跳过时均退出 2。普通开发构建在 Docker 不可用时允许跳过这些环境测试，不能用该结果替代候选证据。
 
 数据库升级验收必须同时覆盖两条路径：已有 H2/v0.2 数据库保持已发布 V1 checksum 并只追加后续迁移；全新 PostgreSQL 使用 `classpath:db/postgresql` 方言迁移。禁止为修复新数据库方言而改写已发布 migration。
