@@ -44,14 +44,7 @@ public final class AirGappedContainerModelAdapter implements EvalModelAdapter {
             NetworkBoundary.AIR_GAPPED,
             (workspace, task) ->
                 command(
-                    docker,
-                    image,
-                    agentCommand,
-                    model,
-                    reasoningEffort,
-                    config,
-                    workspace,
-                    task),
+                    docker, image, agentCommand, model, reasoningEffort, config, workspace, task),
             mapper);
   }
 
