@@ -27,7 +27,7 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --policy-version local-deepseek-agent-v1 \
   --input-price 0 --cached-input-price 0 --output-price 0 \
   --pricing-source local-compute \
-  --maximum-cost-usd 0 --maximum-tokens 2000000 \
+  --maximum-cost-usd 0.01 --maximum-tokens 2000000 \
   --maximum-duration PT8H --maximum-provider-errors 3 --concurrency 1 \
   --task-ids task-001,task-002,task-003,task-004,task-005
 ```
