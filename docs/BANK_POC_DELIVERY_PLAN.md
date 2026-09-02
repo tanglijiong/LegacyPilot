@@ -1,8 +1,8 @@
 # LegacyPilot 银行内网 PoC 交付计划与状态台账
 
 **目标版本：** `v0.3.0-bank-poc`
-**状态：** 技术交付收口中 — 本地 DeepSeek 下载与实测进行中
-**最后更新：** 2026-09-01
+**状态：** 工程与本地部署完成；真实 DeepSeek 质量门禁未通过
+**最后更新：** 2026-09-02
 **冻结分支：** `codex/v0.3-bank-poc-release`
 **工程实现基线：** `26465f85a5f80a79f0f21ab145678ddbbafd85ed`
 **部署与验收基线：** `cc96b1e`（包含 `04f774d9f4db0f1f3658502cc4677cc85c3a2506` 的部署包，并加固三类镜像、模型权重和证据范围门禁）
@@ -38,14 +38,14 @@
 | 1. 统一执行闭环 | DONE | 项目 task/run 可自动进入索引、Agent、审批、恢复、验证和报告，不再要求客户端构造内部 `ProjectIndex` |
 | 2. 企业身份与职责分离 | DONE | 默认认证、RBAC、可信 actor、申请/审批分离和安全 API 测试通过 |
 | 3. Eval 证据产品化 | DONE | 失败分类、A/B 比较、门禁和单文件离线 Dashboard 完成 |
-| 4. DeepSeek 真实基线 | IN PROGRESS | 本机 Metal/llama.cpp 路径已确定，Q4 模型下载中；先完成 5 题 smoke，再运行 20 题全量 |
+| 4. DeepSeek 真实基线 | DONE / GATE FAILED | Q4 本地模型、API、4/5 smoke、两个 20 题 run 和 comparison 均已完成；真实成绩 9/20，低于 70% |
 | 5. 参考部署包 | DONE | PostgreSQL 单节点参考拓扑、离线物料、配置与验收脚本完整 |
 | 6. 银行安全与运维材料 | DONE | 威胁模型、数据流、端口、SBOM、审计、备份和升级材料完整 |
-| 7. 候选版本验收 | IN PROGRESS | 确定性门禁与本机真实 Docker 已通过；只等待本地 DeepSeek 实测和最终全量回归 |
+| 7. 候选版本验收 | BLOCKED | 24/24 Maven、安全、Docker/PostgreSQL 回归已通过；只剩模型质量 45% 未达到 70% |
 
-当前没有银行环境阻塞。Docker Desktop 28.4.0、Apple M2 Max、32GB 统一内存和 Model Runner Metal 引擎可用；本机正在获取 `Q4_K_M` 量化 DeepSeek。主 Agent Runtime 与 Eval 均已增加仅限 loopback 的 OpenAI-compatible HTTP 路径，同时保留可选 Unix socket 严格隔离路径。没有真实运行证据时，不得把 reference ceiling 宣称为模型成绩。
+当前没有银行环境阻塞。Docker Desktop 28.4.0、Apple M2 Max、32GB 统一内存和 Model Runner/llama.cpp 可用；`Q4_K_M` 量化 DeepSeek 已下载并完成真实推理。主 Agent Runtime 与 Eval 均支持仅限 loopback 的 OpenAI-compatible HTTP 路径，同时保留可选 Unix socket 严格隔离路径。唯一阻塞是模型实际质量：smoke 为 4/5，但 20 题 v6 与 v8 都是 9/20（45%），`eval-compare` 因低于 70% 而失败；这不是部署资源、银行配置或人员验收问题。
 
-本机确定性证据（2026-09-01）：完整 Maven reactor 24/24 成功，独立空源码目录复验同样通过；Reactor 内 Java 测试 170 项全部执行，失败 0、错误 0、跳过 0，其中两项 Maven sandbox 和一项 PostgreSQL 16 真实 Docker 集成通过。真实库门禁发现并修复了 PostgreSQL 不支持 `CLOB` 以及缺失 Flyway PostgreSQL 模块的问题，并验证 V1/V2 迁移、项目/任务/run API 与执行发起人记录；同时保留已发布 H2 V1 的原始校验和，并通过从 v0.2 数据库升级到 V2 的回归测试。PostgreSQL 16 参考 Compose 另已以完整镜像 digest 完成健康检查、写入后重启持久化和 `pg_dump` 逻辑恢复校验，烟测资源已清理；DeepSeek 离线契约 4/4；`v0.3-core.1` reference ceiling 20/20；CycloneDX 1.6 SBOM 含 123 个组件。`build-evidence.sh` 缺少 digest 时退出 2，使用本机完整 Maven/PostgreSQL digest 时可从干净构建生成非空 SBOM、第三方许可、依赖树和 SHA-256 清单。本机输出用于验证参考方案的可复现性。真实 Bearer JWT 测试已验证 OIDC `roles` claim 和 subject 信任边界；统一执行路径已进入受管理员保护的 OpenAPI 契约，应用与安全错误具有稳定错误码和 correlation ID；示例见 [银行内网 PoC API 契约与操作示例](BANK_POC_API.md)。候选发布状态详见 [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md)。
+本机确定性证据（2026-09-02）：完整 Maven reactor 24/24 成功；Reactor 内 Java 测试 177 项全部执行，失败 0、错误 0、跳过 0，Spotless、Checkstyle、SpotBugs 和 JaCoCo 通过，其中两项 Maven sandbox 和 PostgreSQL 16 真实 Docker 集成通过。真实库门禁验证 V1/V2 迁移、项目/任务/run API 与职责分离持久化，并保留已发布 H2 V1 校验和。DeepSeek 离线契约 6/6；`v0.3-core.1` reference ceiling 20/20 仍只表示数据集可解。真实模型证据为 `deepseek-local-smoke-20260902-a9`（4/5）、`deepseek-local-full-20260902-v6`（9/20）和 `deepseek-local-full-20260902-v8`（9/20）；comparison 候选共 93,382 Token、本地成本 0 美元、p50 10.883 秒、p95 31.941 秒，11 个失败项为断言 2、测试 3、编译 6，门禁失败原因仅为成功率低于 70%。候选发布状态详见 [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md)。
 
 ## 4. 交付物清单
 

@@ -1,0 +1,215 @@
+{
+  "schemaVersion" : "eval-comparison-v1",
+  "datasetVersion" : "v0.3-core.1",
+  "baselineRunId" : "deepseek-local-full-20260902-v6",
+  "candidateRunId" : "deepseek-local-full-20260902-v8",
+  "generatedAt" : 1788307479.012043000,
+  "baseline" : {
+    "tasks" : 20,
+    "passed" : 9,
+    "passAtOne" : 0.45,
+    "totalCostUsd" : 0,
+    "totalTokens" : 75380,
+    "durationP50Millis" : 11870,
+    "durationP95Millis" : 26331
+  },
+  "candidate" : {
+    "tasks" : 20,
+    "passed" : 9,
+    "passAtOne" : 0.45,
+    "totalCostUsd" : 0,
+    "totalTokens" : 93382,
+    "durationP50Millis" : 10883,
+    "durationP95Millis" : 31941
+  },
+  "tasks" : [ {
+    "taskId" : "task-001",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 57,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-002",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 3139,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-003",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 1249,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-004",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 569,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-005",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "ASSERTION_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 1040,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-006",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "TEST_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 2809,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-007",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 1729,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-008",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "TEST_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : -8974,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-009",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "COMPILE_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 7472,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-010",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 1046,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-011",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 895,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-012",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 1100,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-013",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "COMPILE_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : -2198,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-014",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "TEST_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : -4901,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-015",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "ASSERTION_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 2352,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-016",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "COMPILE_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 16642,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-017",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "COMPILE_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 2841,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-018",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "COMPILE_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 1566,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-019",
+    "baselineStatus" : "PASSED",
+    "candidateStatus" : "PASSED",
+    "candidateFailure" : "NONE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : 2061,
+    "regression" : false,
+    "improvement" : false
+  }, {
+    "taskId" : "task-020",
+    "baselineStatus" : "FAILED",
+    "candidateStatus" : "FAILED",
+    "candidateFailure" : "COMPILE_FAILURE",
+    "costDeltaUsd" : 0,
+    "durationDeltaMillis" : -3794,
+    "regression" : false,
+    "improvement" : false
+  } ],
+  "candidateFailures" : {
+    "ASSERTION_FAILURE" : 2,
+    "TEST_FAILURE" : 3,
+    "COMPILE_FAILURE" : 6
+  },
+  "gate" : {
+    "passed" : false,
+    "reasons" : [ "candidate pass@1 is below 70%" ]
+  }
+}

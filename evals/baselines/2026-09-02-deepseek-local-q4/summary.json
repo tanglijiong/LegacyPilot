@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "legacy-pilot-local-model-baseline-v1",
+  "datasetVersion": "v0.3-core.1",
+  "datasetSha256": "2673a79700ff9c92efea1e321e6715a9859a48047310843732da17ebdb5cb7e9",
+  "repositoryCommit": "0d69f910d70b1128d71221b3af7854093d1b68f3",
+  "model": "hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m",
+  "modelParameters": "15.7B",
+  "localModelSizeGb": 10.4,
+  "runtime": "Docker Model Runner / llama.cpp",
+  "architecture": "Apple M2 Max aarch64",
+  "networkBoundary": "loopback-only",
+  "smoke": {
+    "runId": "deepseek-local-smoke-20260902-a9",
+    "passed": 4,
+    "tasks": 5,
+    "targetMet": true
+  },
+  "baseline": {
+    "runId": "deepseek-local-full-20260902-v6",
+    "passed": 9,
+    "tasks": 20,
+    "tokens": 75380,
+    "p50Millis": 11870,
+    "p95Millis": 26331
+  },
+  "candidate": {
+    "runId": "deepseek-local-full-20260902-v8",
+    "passed": 9,
+    "tasks": 20,
+    "passAtOne": 0.45,
+    "tokens": 93382,
+    "costUsd": 0,
+    "p50Millis": 10883,
+    "p95Millis": 31941,
+    "failureCounts": {
+      "ASSERTION_FAILURE": 2,
+      "TEST_FAILURE": 3,
+      "COMPILE_FAILURE": 6
+    }
+  },
+  "comparison": {
+    "regressions": 0,
+    "improvements": 0,
+    "gatePassed": false,
+    "reasons": ["candidate pass@1 is below 70%"]
+  },
+  "referenceSolutionsProvidedToModel": false,
+  "cudaRequired": false
+}

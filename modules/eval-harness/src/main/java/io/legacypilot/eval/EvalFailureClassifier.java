@@ -19,18 +19,25 @@ public final class EvalFailureClassifier {
     if (contains(failure, "policy", "approval", "capability", "denied")) {
       return EvalFailure.POLICY_OR_APPROVAL_BLOCK;
     }
-    if (contains(failure, "integrity", "fixture", "dataset", "checksum", "hidden test")) {
+    if (contains(
+        failure,
+        "integrity violation",
+        "fixture is unavailable",
+        "dataset checksum",
+        "fixture checksum")) {
       return EvalFailure.DATASET_OR_INFRA_FAILURE;
     }
     if (result.status() == EvalTaskResult.Status.ERROR
         || contains(failure, "sandbox", "agent process", "docker", "tool")) {
       return EvalFailure.TOOL_OR_SANDBOX_FAILURE;
     }
-    if (!result.compiled()) {
-      return EvalFailure.COMPILE_FAILURE;
-    }
-    if (!result.testsPassed()) {
+    if (contains(failure, "tests run:", "there are test failures", "<<< failure!", "<<< error!")
+        || (result.compiled() && !result.testsPassed())) {
       return EvalFailure.TEST_FAILURE;
+    }
+    if (!result.compiled()
+        || contains(failure, "compilation error", "compilation failure", "compiler failed")) {
+      return EvalFailure.COMPILE_FAILURE;
     }
     if (result.passedAssertions() < result.totalAssertions()) {
       return EvalFailure.ASSERTION_FAILURE;

@@ -55,6 +55,40 @@ class EvalComparisonTest {
             List.of(),
             "compiler failed");
     assertEquals(EvalFailure.COMPILE_FAILURE, compileFailure.primaryFailure());
+
+    var hiddenTestFailure =
+        new EvalTaskResult(
+            "task-002",
+            EvalTaskResult.Status.FAILED,
+            1,
+            1,
+            false,
+            false,
+            0,
+            1,
+            10,
+            BigDecimal.ZERO,
+            Duration.ZERO,
+            List.of(),
+            "[ERROR] Tests run: 1, Failures: 1 in Task006HiddenTest for fixture");
+    assertEquals(EvalFailure.TEST_FAILURE, hiddenTestFailure.primaryFailure());
+
+    var datasetFailure =
+        new EvalTaskResult(
+            "task-003",
+            EvalTaskResult.Status.ERROR,
+            0,
+            1,
+            false,
+            false,
+            0,
+            0,
+            0,
+            BigDecimal.ZERO,
+            Duration.ZERO,
+            List.of(),
+            "dataset checksum does not match");
+    assertEquals(EvalFailure.DATASET_OR_INFRA_FAILURE, datasetFailure.primaryFailure());
   }
 
   private static EvalExperimentManifest manifest(String runId, String datasetVersion) {

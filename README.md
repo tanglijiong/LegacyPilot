@@ -100,7 +100,7 @@ Token / Cost / Duration: recorded
 
 `v0.2.0` 已正式发布：系统具备 Java 代码智能、受控工具、Agent Loop、审批验证、可授权写入的 STDIO MCP、可恢复长任务，以及 Policy/Capability、多模型路由、revision-scoped Vector/Reranker 和 Docker 依赖治理。发布证据见 [v0.2 清单](docs/RELEASE_CHECKLIST_V0.2.md)。
 
-当前主线为 `0.3.0-SNAPSHOT`。20 题受治理 Eval、可恢复真实模型 Runner、失败分类、A/B 比较和离线 Dashboard 的工程实现已完成；统一执行 API、身份与职责分离、PostgreSQL 参考部署和运维材料已经具备。DeepSeek 支持本机 loopback HTTP 和可选 Unix socket 两种路径；当前正在 M2 Max/Metal 上完成 Q4 量化模型实测，不依赖银行 OIDC、证书、测试身份、审批或 CUDA GPU 服务器，详见[交付台账](docs/BANK_POC_DELIVERY_PLAN.md)。
+当前主线为 `0.3.0-SNAPSHOT`。20 题受治理 Eval、可恢复真实模型 Runner、失败分类、A/B 比较和离线 Dashboard 的工程实现已完成；统一执行 API、身份与职责分离、PostgreSQL 参考部署和运维材料已经具备。DeepSeek 已通过本机 loopback HTTP 在 M2 Max/Model Runner 上完成 Q4 实测：5 题 smoke 为 4/5，20 题完整结果为 9/20（45%）。因此工程与本地部署完成，但尚未达到既定 70% 模型质量发布门槛；这不依赖银行 OIDC、证书、测试身份、审批或 CUDA GPU 服务器，详见[交付台账](docs/BANK_POC_DELIVERY_PLAN.md)。
 
 ## 本地开发
 

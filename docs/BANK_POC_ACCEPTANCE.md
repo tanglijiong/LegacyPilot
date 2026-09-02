@@ -2,10 +2,10 @@
 
 ## 1. 验收前置
 
-- 所有 JAR、镜像、模型权重、Prompt、Policy 和数据集摘要均已批准并记录。
+- JDK 21、Maven Wrapper、Docker Desktop 和本地 DeepSeek 模型可用。
 - 测试使用公开 fixture 或非生产脱敏仓库，不使用生产代码和生产凭据。
-- 宿主防火墙、OIDC、PostgreSQL、加密卷、rootless Docker 和模型 socket 已配置。
-- 验收人员至少包含开发者、独立审批人、审计员和管理员四个身份。
+- 本地模型可通过 loopback OpenAI-compatible API 调用；Apple Silicon Metal、CPU 或 CUDA 均可，CUDA 不是门槛。
+- OIDC、内部 CA、正式数据库密钥、机构身份和人员签字只属于未来具体机构部署配置，不属于本地技术版本验收前置。
 
 ## 2. 自动化门禁
 
@@ -15,7 +15,7 @@ python3 -m unittest discover -s deploy/deepseek -p 'test_*.py' -v
 java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-run
 ```
 
-开发验证可以使用上述命令。候选证据生成必须先设置已批准且完整 digest 固定的 `LEGACY_PILOT_MAVEN_IMAGE` 和 `LEGACY_PILOT_POSTGRES_TEST_IMAGE`，确认镜像已导入离线 Docker 存储，再运行 `deploy/bank-poc/build-evidence.sh`；脚本对缺失、非 digest 或本地不存在的镜像失败关闭，并在不启动额外 Ryuk 镜像的情况下运行全量验证。
+本地技术候选使用上述命令和真实模型评测结果。`deploy/bank-poc/build-evidence.sh` 是未来严格离线机构部署的可选证据路径，其 digest/离线镜像要求不阻塞本地技术发布。
 
 要求：全量构建和静态检查通过；两项 Maven sandbox 与一项 PostgreSQL 真实 Docker 集成测试不得跳过；DeepSeek 契约测试通过；reference ceiling 为 20/20。Reference ceiling 只验证数据集，不能替代真实模型基线。证据摘要必须覆盖全部受版本控制的应用、部署、文档、评测和构建配置，以及最终构建的 JAR，而不只覆盖少数文件扩展名。
 
@@ -54,7 +54,7 @@ python3 deploy/deepseek/test_offline_agent.py
 
 发布门槛：integrity violation 为 0；20 题 pass@1 目标不低于 70%；最多一次公开反馈后不低于 85%；候选策略最多回归 1 题，且回归 1 题时成本或 p95 至少改善 15%。未达标可以保留完整报告，但不能升级为默认策略。
 
-## 6. 运维验收
+## 6. 未来机构部署运维验收（不属于本地技术门槛）
 
 - 完成一次 PostgreSQL + state 卷一致性备份和异机/空目录恢复。
 - 完成一次 JAR/Policy 升级和回滚演练。
