@@ -28,6 +28,7 @@ MAX_FILE_BYTES = 64_000
 MAX_CHANGED_FILES = 12
 MAX_CHANGED_BYTES = 1_000_000
 ALLOWED_ROOTS = ("src/main/java/", "src/main/resources/")
+TRACE_DIRECTORY = ".legacy-pilot"
 
 
 class UnixHTTPConnection(http.client.HTTPConnection):
@@ -159,8 +160,9 @@ def wait_until_ready(process: subprocess.Popen[bytes], log_path: Path) -> None:
     raise TimeoutError("local model server did not become healthy")
 
 
-def source_context(workspace: Path) -> str:
+def source_context(workspace: Path) -> tuple[str, list[dict[str, int | str]]]:
     retained: list[str] = []
+    selected: list[dict[str, int | str]] = []
     total = 0
     candidates: list[Path] = []
     pom = workspace / "pom.xml"
@@ -183,10 +185,55 @@ def source_context(workspace: Path) -> str:
         relative = path.relative_to(workspace).as_posix()
         content = path.read_text("utf-8", errors="replace")
         retained.append(f"\n--- READ-ONLY CONTEXT: {relative} ---\n{content}")
-        total += len(content.encode("utf-8"))
+        content_bytes = len(content.encode("utf-8"))
+        selected.append({"path": relative, "bytes": content_bytes})
+        total += content_bytes
     if not retained:
         raise ValueError("workspace contains no readable production source")
-    return "".join(retained)
+    return "".join(retained), selected
+
+
+def planning_completion(
+    prompt: str,
+    context: str,
+    served_name: str,
+    allowed_files: list[str],
+    required_files: list[str],
+    acceptance: list[str],
+) -> dict:
+    payload = {
+        "model": served_name,
+        "temperature": 0.0,
+        "max_tokens": 2048,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are planning a Java 21 maintenance change. Return only a JSON object "
+                    "with a plan array, risks array, and preserved_api array. Inspect every caller "
+                    "and test in the supplied workspace. Identify exact existing constructors, "
+                    "methods, return types, and top-level types that must remain source-compatible. "
+                    "Do not write code and do not invent requirements."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"REQUIREMENT:\n{prompt}\n\nALLOWED FILES:\n"
+                    + "\n".join(f"- {path}" for path in allowed_files)
+                    + "\n\nREQUIRED FILES:\n"
+                    + "\n".join(f"- {path}" for path in required_files)
+                    + "\n\nPUBLIC CHECKS:\n"
+                    + "\n".join(f"- {check}" for check in acceptance)
+                    + f"\n\nWORKSPACE SOURCE:\n{context}"
+                ),
+            },
+        ],
+        "response_format": {"type": "json_object"},
+    }
+    return local_request("/v1/chat/completions", payload, timeout=trusted_integer(
+        "LEGACY_PILOT_INFERENCE_SECONDS", 600, 30, 1800
+    ))
 
 
 def completion(
@@ -196,6 +243,7 @@ def completion(
     allowed_files: list[str],
     required_files: list[str],
     acceptance: list[str],
+    plan: dict,
     feedback: str,
 ) -> dict:
     allowed = "\n".join(f"- {path}" for path in allowed_files) or "- production source files only"
@@ -223,6 +271,11 @@ def completion(
         "be used as an exception message or named constant, not paraphrased. An exact Java member "
         "such as ZoneOffset.UTC must be used in executable code with the necessary import. Create "
         "every required new file."
+        " Preserve all existing public and package-visible constructors, methods, return types, "
+        "and top-level types unless the requirement explicitly asks to replace them. Add overloads "
+        "instead of removing an existing API. Keep exactly one public top-level Java type per file, "
+        "and keep its name equal to the filename. Check imports, mutability, null handling, callers, "
+        "and boundary values before returning."
     )
     payload = {
         "model": served_name,
@@ -237,6 +290,7 @@ def completion(
                     f"\n\nREQUIRED CHANGED OR CREATED FILES:\n{required}"
                     f"\n\nPUBLIC ACCEPTANCE CHECKS:\n{checks}"
                     f"\n\nWORKSPACE SOURCE:\n{context}"
+                    f"\n\nAPPROVED IMPLEMENTATION PLAN:\n{json.dumps(plan, ensure_ascii=False)}"
                     f"\n\nFINAL NON-NEGOTIABLE CHECKLIST:\n{checks}"
                     f"\nEvery required file must be returned with complete content.{feedback}"
                 ),
@@ -385,6 +439,23 @@ def add_usage(total: dict[str, int], response: dict) -> None:
     total["reasoning_output_tokens"] += max(0, int(usage.get("reasoning_tokens", 0)))
 
 
+def write_trace(workspace: Path, trace: dict) -> None:
+    directory = workspace / TRACE_DIRECTORY
+    directory.mkdir(parents=True, exist_ok=True)
+    target = directory / "agent-trace.json"
+    descriptor, temporary = tempfile.mkstemp(prefix=".agent-trace-", dir=directory)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+            json.dump(trace, output, ensure_ascii=False, indent=2)
+            output.write("\n")
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, target)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 def main() -> int:
     args = arguments()
     workspace = Path(args.workspace).resolve()
@@ -409,26 +480,68 @@ def main() -> int:
             process, log_path = start_server(Path(args.model).resolve(), args.served_model_name)
             wait_until_ready(process, log_path)
         usage = {"input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
+        context, selected_context = source_context(workspace)
+        planning_response = planning_completion(
+            prompt,
+            context,
+            args.served_model_name,
+            args.allowed_file,
+            args.required_file,
+            args.acceptance,
+        )
+        add_usage(usage, planning_response)
+        plan = response_object(planning_response)
+        trace = {
+            "requirement": prompt,
+            "selectedContext": selected_context,
+            "plan": plan,
+            "toolCalls": [{"tool": "model.plan", "result": "completed"}],
+            "attempts": [],
+            "model": args.served_model_name,
+            "reasoningEffort": args.reasoning_effort,
+        }
         feedback = ""
-        for attempt in range(2):
+        for attempt in range(3):
+            attempt_trace: dict[str, object] = {"attempt": attempt + 1}
             try:
+                context, selected_context = source_context(workspace)
                 response = completion(
                     prompt,
-                    source_context(workspace),
+                    context,
                     args.served_model_name,
                     args.allowed_file,
                     args.required_file,
                     args.acceptance,
+                    plan,
                     feedback,
                 )
                 add_usage(usage, response)
-                apply_files(
+                payload = response_object(response)
+                changed_count = apply_files(
                     workspace,
-                    response_object(response),
+                    payload,
                     args.allowed_file,
                     args.required_file,
                 )
                 failures = public_failures(workspace, args.acceptance) + build_failures(workspace)
+                attempt_trace.update(
+                    {
+                        "modifiedFiles": [item["path"] for item in payload["files"]],
+                        "publicVerification": "passed" if not failures else "failed",
+                        "failures": failures,
+                    }
+                )
+                trace["toolCalls"].extend(
+                    [
+                        {"tool": "model.edit", "attempt": attempt + 1, "result": "completed"},
+                        {"tool": "workspace.apply", "attempt": attempt + 1, "files": changed_count},
+                        {
+                            "tool": "maven.test",
+                            "attempt": attempt + 1,
+                            "result": "passed" if not failures else "failed",
+                        },
+                    ]
+                )
             except (
                 ValueError,
                 OSError,
@@ -436,14 +549,24 @@ def main() -> int:
                 urllib.error.URLError,
             ) as error:
                 failures = [f"Patch application failed: {error}"]
-            if not failures or attempt == 1:
+                attempt_trace.update({"modifiedFiles": [], "failures": failures})
+                trace["toolCalls"].append(
+                    {"tool": "model.edit", "attempt": attempt + 1, "result": "failed"}
+                )
+            trace["attempts"].append(attempt_trace)
+            trace["selectedContext"] = selected_context
+            trace["usage"] = usage
+            write_trace(workspace, trace)
+            if not failures or attempt == 2:
                 break
             feedback = (
                 "\n\nRETRY REQUIRED. Your previous patch failed public verification. Fix the current "
                 "workspace and return complete replacement content again. Do not explain. Before "
                 "returning, verify every public check yourself. A CONTAINS check requires its value "
                 "to appear as exact literal source text; compilation errors must be fixed with all "
-                "required imports and types. Failures:\n- "
+                "required imports and types. Preserve every pre-existing API used anywhere in the "
+                "workspace and do not move a public top-level type into a differently named file. "
+                "Failures:\n- "
                 + "\n- ".join(failures)
             )
         output_tokens = usage["output_tokens"]
@@ -457,6 +580,9 @@ def main() -> int:
                 "reasoning_output_tokens": reasoning_tokens,
             },
         }
+        trace["usage"] = usage
+        trace["finalPublicVerification"] = "passed" if not failures else "failed"
+        write_trace(workspace, trace)
         print(json.dumps(event))
         return 0
     finally:

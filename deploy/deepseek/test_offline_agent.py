@@ -51,6 +51,18 @@ class OfflineAgentTest(unittest.TestCase):
                 ],
                 "usage": {"prompt_tokens": 10, "completion_tokens": 5},
             }
+            plan_response = {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {"plan": ["preserve Value"], "risks": [], "preserved_api": []}
+                            )
+                        }
+                    }
+                ],
+                "usage": {"prompt_tokens": 4, "completion_tokens": 2},
+            }
             old_base = os.environ.get("LEGACY_PILOT_MODEL_BASE_URL")
             os.environ["LEGACY_PILOT_MODEL_BASE_URL"] = "http://127.0.0.1:12434/v1"
             try:
@@ -60,7 +72,7 @@ class OfflineAgentTest(unittest.TestCase):
                     mock.patch.object(
                         model_agent,
                         "local_request",
-                        side_effect=[{"data": []}, response],
+                        side_effect=[{"data": []}, plan_response, response],
                     ),
                     mock.patch.object(model_agent, "build_failures", return_value=[]),
                 ):
