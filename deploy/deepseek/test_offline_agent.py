@@ -15,6 +15,26 @@ import start_model_service
 
 
 class OfflineAgentTest(unittest.TestCase):
+    def test_failed_attempt_can_restore_allowed_files_transactionally(self):
+        with tempfile.TemporaryDirectory() as root:
+            workspace = Path(root)
+            existing = workspace / "src/main/java/example/Existing.java"
+            created = workspace / "src/main/java/example/Created.java"
+            existing.parent.mkdir(parents=True)
+            existing.write_text("original\n", "utf-8")
+            paths = [
+                "src/main/java/example/Existing.java",
+                "src/main/java/example/Created.java",
+            ]
+
+            snapshot = model_agent.snapshot_allowed_files(workspace, paths)
+            existing.write_text("broken\n", "utf-8")
+            created.write_text("new\n", "utf-8")
+            model_agent.restore_allowed_files(workspace, snapshot)
+
+            self.assertEqual("original\n", existing.read_text("utf-8"))
+            self.assertFalse(created.exists())
+
     def test_planning_failure_uses_a_conservative_fallback(self):
         usage = {"input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
         with mock.patch.object(

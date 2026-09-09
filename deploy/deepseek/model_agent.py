@@ -243,7 +243,6 @@ def completion(
     allowed_files: list[str],
     required_files: list[str],
     acceptance: list[str],
-    plan: dict,
     feedback: str,
 ) -> dict:
     allowed = "\n".join(f"- {path}" for path in allowed_files) or "- production source files only"
@@ -290,7 +289,6 @@ def completion(
                     f"\n\nREQUIRED CHANGED OR CREATED FILES:\n{required}"
                     f"\n\nPUBLIC ACCEPTANCE CHECKS:\n{checks}"
                     f"\n\nWORKSPACE SOURCE:\n{context}"
-                    f"\n\nAPPROVED IMPLEMENTATION PLAN:\n{json.dumps(plan, ensure_ascii=False)}"
                     f"\n\nFINAL NON-NEGOTIABLE CHECKLIST:\n{checks}"
                     f"\nEvery required file must be returned with complete content.{feedback}"
                 ),
@@ -485,6 +483,33 @@ def write_trace(workspace: Path, trace: dict) -> None:
             os.unlink(temporary)
 
 
+def snapshot_allowed_files(workspace: Path, allowed_files: list[str]) -> dict[str, bytes | None]:
+    snapshot: dict[str, bytes | None] = {}
+    for raw_path in allowed_files:
+        target = safe_target(workspace, raw_path)
+        snapshot[raw_path] = target.read_bytes() if target.is_file() else None
+    return snapshot
+
+
+def restore_allowed_files(workspace: Path, snapshot: dict[str, bytes | None]) -> None:
+    for raw_path, content in snapshot.items():
+        target = safe_target(workspace, raw_path)
+        if content is None:
+            target.unlink(missing_ok=True)
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary = tempfile.mkstemp(prefix=".model-agent-restore-", dir=target.parent)
+        try:
+            with os.fdopen(descriptor, "wb") as output:
+                output.write(content)
+                output.flush()
+                os.fsync(output.fileno())
+            os.replace(temporary, target)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+
+
 def main() -> int:
     args = arguments()
     workspace = Path(args.workspace).resolve()
@@ -532,6 +557,7 @@ def main() -> int:
         touched_files: set[str] = set()
         for attempt in range(3):
             attempt_trace: dict[str, object] = {"attempt": attempt + 1}
+            attempt_snapshot = snapshot_allowed_files(workspace, args.allowed_file)
             try:
                 context, selected_context = source_context(workspace)
                 response = completion(
@@ -541,7 +567,6 @@ def main() -> int:
                     args.allowed_file,
                     args.required_file,
                     args.acceptance,
-                    plan,
                     feedback,
                 )
                 add_usage(usage, response)
@@ -594,9 +619,12 @@ def main() -> int:
             write_trace(workspace, trace)
             if not failures or attempt == 2:
                 break
+            restore_allowed_files(workspace, attempt_snapshot)
+            touched_files.clear()
             feedback = (
                 "\n\nRETRY REQUIRED. Your previous patch failed public verification. Fix the current "
-                "workspace and return complete replacement content again. Do not explain. Before "
+                "workspace, which has been restored to its last verified state, and return complete "
+                "replacement content again. Do not explain. Before "
                 "returning, verify every public check yourself. A CONTAINS check requires its value "
                 "to appear as exact literal source text; compilation errors must be fixed with all "
                 "required imports and types. Preserve every pre-existing API used anywhere in the "
