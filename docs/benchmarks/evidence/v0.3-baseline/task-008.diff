@@ -1,0 +1,68 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderController.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderController.java
+@@ -8,6 +8,10 @@
+   }
+
+   public ApiResponse get(String id) {
+-    return ApiResponse.ok(service.get(id));
++    try {
++      return ApiResponse.ok(service.get(id));
++    } catch (IllegalArgumentException e) {
++      return ApiResponse.notFound(OrderNotFoundException.ORDER_NOT_FOUND);
++    }
+   }
+-}
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderNotFoundException.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderNotFoundException.java
+@@ -0,0 +1,8 @@
++package io.legacypilot.fixtures.orders;
++
++public class OrderNotFoundException extends RuntimeException {
++  public static final String ORDER_NOT_FOUND = "Order not found";
++  public OrderNotFoundException() {
++    super(ORDER_NOT_FOUND);
++  }
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+@@ -14,24 +14,23 @@
+   }
+
+   public Order create(String requestId, String sku, int quantity, String paymentToken) {
+-    var order =
+-        new Order(
+-            UUID.randomUUID().toString(),
+-            requestId,
+-            sku,
+-            quantity,
+-            OrderStatus.CREATED,
+-            paymentToken,
+-            clock.instant());
++    var order = new Order(
++        UUID.randomUUID().toString(),
++        requestId,
++        sku,
++        quantity,
++        OrderStatus.CREATED,
++        paymentToken,
++        clock.instant());
+     repository.save(order);
+     return order;
+   }
+
+   public Order get(String id) {
+-    return repository.findById(id).orElseThrow(IllegalArgumentException::new);
++    return repository.findById(id).orElseThrow(() -> new OrderNotFoundException());
+   }
+
+   public Optional<Order> find(String id) {
+     return repository.findById(id);
+   }
+-}
++}
+\ No newline at end of file

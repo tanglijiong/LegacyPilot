@@ -1,0 +1,68 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+@@ -1,9 +1,12 @@
+ package io.legacypilot.fixtures.orders;
+
+-import java.util.Optional;
++import java.time.Instant;
++import java.util.List;
+
+ public interface OrderRepository {
+   void save(Order order);
+
++  List<Order> findByCreatedAtBetween(Instant fromInclusive, Instant toExclusive);
++
+   Optional<Order> findById(String id);
+-}
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+@@ -1,6 +1,7 @@
+ package io.legacypilot.fixtures.orders;
+
+ import java.time.Clock;
++import java.time.Instant;
+ import java.util.Optional;
+ import java.util.UUID;
+
+@@ -14,15 +15,14 @@
+   }
+
+   public Order create(String requestId, String sku, int quantity, String paymentToken) {
+-    var order =
+-        new Order(
+-            UUID.randomUUID().toString(),
+-            requestId,
+-            sku,
+-            quantity,
+-            OrderStatus.CREATED,
+-            paymentToken,
+-            clock.instant());
++    var order = new Order(
++        UUID.randomUUID().toString(),
++        requestId,
++        sku,
++        quantity,
++        OrderStatus.CREATED,
++        paymentToken,
++        clock.instant());
+     repository.save(order);
+     return order;
+   }
+@@ -34,4 +34,12 @@
+   public Optional<Order> find(String id) {
+     return repository.findById(id);
+   }
+-}
++
++  public List<Order> findByCreatedAtBetween(Instant fromInclusive, Instant toExclusive) {
++    if (toExclusive.isAfter(fromInclusive)) {
++      return repository.findByCreatedAtBetween(fromInclusive, toExclusive);
++    } else {
++      throw new IllegalArgumentException("INVALID_HISTORY_RANGE");
++    }
++  }
++}
+\ No newline at end of file

@@ -1,0 +1,15 @@
+--- a/src/main/java/io/legacypilot/samples/banking/TransferQuery.java
++++ b/src/main/java/io/legacypilot/samples/banking/TransferQuery.java
+@@ -0,0 +1,11 @@
++package io.legacypilot.samples.banking;
++
++import java.math.BigDecimal;
++
++public record TransferQuery(
++    String accountId,
++    BigDecimal totalAmount,
++    int count,
++    java.time.Instant from,
++    java.time.Instant to
++) {}
+\ No newline at end of file

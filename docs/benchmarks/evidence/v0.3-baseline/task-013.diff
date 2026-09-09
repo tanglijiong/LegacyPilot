@@ -1,0 +1,63 @@
+--- a/src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
++++ b/src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+@@ -1,41 +1,24 @@
+ package io.legacypilot.fixtures.jobs;
+
+-import java.time.LocalDateTime;
+-import java.time.ZoneId;
++import java.util.concurrent.atomic.AtomicBoolean;
+
+-public final class JobScheduler {
+-  private final JobRepository repository;
+-  private final RetryPolicy retryPolicy;
++public class JobScheduler {
++    private final JobRepository repository;
++    private final RetryPolicy retryPolicy;
++    private final AtomicBoolean runningJobs = new AtomicBoolean(false);
+
+-  public JobScheduler(JobRepository repository, RetryPolicy retryPolicy) {
+-    this.repository = repository;
+-    this.retryPolicy = retryPolicy;
+-  }
++    public JobScheduler(JobRepository repository, RetryPolicy retryPolicy) {
++        this.repository = repository;
++        this.retryPolicy = retryPolicy;
++    }
+
+-  public Job retry(Job job, java.time.Instant now) {
+-    var retried = job.retryAt(retryPolicy.nextAttempt(now, job.attempt()));
+-    repository.save(retried);
+-    return retried;
+-  }
+-
+-  public Job schedule(String id, LocalDateTime scheduledAt, int priority) {
+-    var job =
+-        new Job(
+-            id,
+-            scheduledAt.atZone(ZoneId.systemDefault()).toInstant(),
+-            0,
+-            priority,
+-            JobStatus.READY);
+-    repository.save(job);
+-    return job;
+-  }
+-
+-  public boolean claim(String id) {
+-    var job = repository.findById(id).orElse(null);
+-    if (job == null || job.status() != JobStatus.READY) {
+-      return false;
++    synchronized public boolean claim(String id) {
++        var job = repository.findById(id).orElse(null);
++        if (job == null || job.status() != JobStatus.READY || runningJobs.get()) {
++            return false;
++        }
++        repository.save(job.withStatus(JobStatus.RUNNING));
++        runningJobs.set(true);
++        return true;
+     }
+-    repository.save(job.withStatus(JobStatus.RUNNING));
+-    return true;
+-  }
+-}
++}
+\ No newline at end of file

@@ -1,0 +1,67 @@
+--- a/src/main/java/io/legacypilot/samples/banking/Account.java
++++ b/src/main/java/io/legacypilot/samples/banking/Account.java
+@@ -2,4 +2,13 @@
+
+ import java.math.BigDecimal;
+
+-public record Account(String id, String customerId, BigDecimal balance, String status) {}
++public record Account(String id, String customerId, BigDecimal balance, String status) {
++  public static final String INSUFFICIENT_FUNDS = "INSUFFICIENT_FUNDS";
++
++  public void subtract(BigDecimal amount) {
++    if (this.balance.compareTo(amount) < 0) {
++      throw new IllegalArgumentException(INSUFFICIENT_FUNDS);
++    }
++    this.balance = this.balance.subtract(amount);
++  }
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/samples/banking/TransferService.java
++++ b/src/main/java/io/legacypilot/samples/banking/TransferService.java
+@@ -3,8 +3,10 @@
+ import java.math.BigDecimal;
+ import java.time.Clock;
+ import java.time.Instant;
++import java.util.List;
+ import java.util.Objects;
+ import java.util.UUID;
++
+ import org.springframework.stereotype.Service;
+
+ /** Baseline transfer service. Daily limit enforcement is intentionally absent. */
+@@ -15,11 +17,7 @@
+   private final CustomerRepository customers;
+   private final Clock clock;
+
+-  public TransferService(
+-      TransferRepository repository,
+-      AccountRepository accounts,
+-      CustomerRepository customers,
+-      Clock clock) {
++  public TransferService(TransferRepository repository, AccountRepository accounts, CustomerRepository customers, Clock clock) {
+     this.repository = Objects.requireNonNull(repository);
+     this.accounts = Objects.requireNonNull(accounts);
+     this.customers = Objects.requireNonNull(customers);
+@@ -27,14 +25,15 @@
+   }
+
+   public TransferRecord transfer(String accountId, BigDecimal amount) {
+-    var transfer =
+-        new TransferRecord(UUID.randomUUID().toString(), accountId, amount, clock.instant());
++    var debited = accounts.findById(accountId).orElseThrow(() -> new IllegalArgumentException("Account not found"));
++    debited.subtract(amount);
++    accounts.save(debited);
++    var transfer = new TransferRecord(UUID.randomUUID().toString(), accountId, amount, clock.instant());
+     repository.save(transfer);
+     return transfer;
+   }
+
+-  public java.util.List<TransferRecord> history(
+-      String accountId, Instant fromInclusive, Instant toExclusive) {
++  public List<TransferRecord> history(String accountId, Instant fromInclusive, Instant toExclusive) {
+     return repository.findByAccountIdAndOccurredAtBetween(accountId, fromInclusive, toExclusive);
+   }
+-}
++}
+\ No newline at end of file

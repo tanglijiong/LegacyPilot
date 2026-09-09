@@ -1,0 +1,38 @@
+--- a/src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
++++ b/src/main/java/io/legacypilot/fixtures/jobs/JobScheduler.java
+@@ -1,7 +1,7 @@
+ package io.legacypilot.fixtures.jobs;
+
+ import java.time.LocalDateTime;
+-import java.time.ZoneId;
++import java.time.ZoneOffset;
+
+ public final class JobScheduler {
+   private final JobRepository repository;
+@@ -19,13 +19,12 @@
+   }
+
+   public Job schedule(String id, LocalDateTime scheduledAt, int priority) {
+-    var job =
+-        new Job(
+-            id,
+-            scheduledAt.atZone(ZoneId.systemDefault()).toInstant(),
+-            0,
+-            priority,
+-            JobStatus.READY);
++    var job = new Job(
++        id,
++        scheduledAt.atZone(ZoneOffset.UTC).toInstant(),
++        0,
++        priority,
++        JobStatus.READY);
+     repository.save(job);
+     return job;
+   }
+@@ -38,4 +37,4 @@
+     repository.save(job.withStatus(JobStatus.RUNNING));
+     return true;
+   }
+-}
++}
+\ No newline at end of file

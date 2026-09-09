@@ -1,0 +1,37 @@
+--- a/src/main/java/io/legacypilot/samples/banking/TransferService.java
++++ b/src/main/java/io/legacypilot/samples/banking/TransferService.java
+@@ -15,11 +15,7 @@
+   private final CustomerRepository customers;
+   private final Clock clock;
+
+-  public TransferService(
+-      TransferRepository repository,
+-      AccountRepository accounts,
+-      CustomerRepository customers,
+-      Clock clock) {
++  public TransferService(TransferRepository repository, AccountRepository accounts, CustomerRepository customers, Clock clock) {
+     this.repository = Objects.requireNonNull(repository);
+     this.accounts = Objects.requireNonNull(accounts);
+     this.customers = Objects.requireNonNull(customers);
+@@ -27,14 +23,15 @@
+   }
+
+   public TransferRecord transfer(String accountId, BigDecimal amount) {
+-    var transfer =
+-        new TransferRecord(UUID.randomUUID().toString(), accountId, amount, clock.instant());
++    if (amount.signum() <= 0) {
++      throw new IllegalArgumentException("INVALID_TRANSFER_AMOUNT");
++    }
++    var transfer = new TransferRecord(UUID.randomUUID().toString(), accountId, amount, clock.instant());
+     repository.save(transfer);
+     return transfer;
+   }
+
+-  public java.util.List<TransferRecord> history(
+-      String accountId, Instant fromInclusive, Instant toExclusive) {
++  public java.util.List<TransferRecord> history(String accountId, Instant fromInclusive, Instant toExclusive) {
+     return repository.findByAccountIdAndOccurredAtBetween(accountId, fromInclusive, toExclusive);
+   }
+-}
++}
+\ No newline at end of file

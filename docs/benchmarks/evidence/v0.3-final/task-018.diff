@@ -1,0 +1,59 @@
+--- a/src/main/java/io/legacypilot/samples/banking/Account.java
++++ b/src/main/java/io/legacypilot/samples/banking/Account.java
+@@ -2,4 +2,6 @@
+
+ import java.math.BigDecimal;
+
+-public record Account(String id, String customerId, BigDecimal balance, String status) {}
++public record Account(String id, String customerId, BigDecimal balance, String status) {
++  public static final String INSUFFICIENT_FUNDS = "Insufficient funds";
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/samples/banking/TransferService.java
++++ b/src/main/java/io/legacypilot/samples/banking/TransferService.java
+@@ -5,18 +5,15 @@
+ import java.time.Instant;
+ import java.util.Objects;
+ import java.util.UUID;
+-import org.springframework.stereotype.Service;
+
+ /** Baseline transfer service. Daily limit enforcement is intentionally absent. */
+-@Service
+ public final class TransferService {
+   private final TransferRepository repository;
+   private final AccountRepository accounts;
+   private final CustomerRepository customers;
+   private final Clock clock;
+
+-  public TransferService(
+-      TransferRepository repository,
++  public TransferService(TransferRepository repository,
+       AccountRepository accounts,
+       CustomerRepository customers,
+       Clock clock) {
+@@ -27,14 +24,20 @@
+   }
+
+   public TransferRecord transfer(String accountId, BigDecimal amount) {
+-    var transfer =
+-        new TransferRecord(UUID.randomUUID().toString(), accountId, amount, clock.instant());
++    var debited = accounts.findById(accountId).orElseThrow(() -> new IllegalArgumentException("Account not found"));
++    if (debited.balance().compareTo(amount) < 0) {
++      throw new IllegalArgumentException(INSUFFICIENT_FUNDS);
++    }
++    var debitedAmount = debited.balance().subtract(amount);
++    var debitedAccount = new Account(debited.id(), debited.customerId(), debitedAmount, debited.status());
++    accounts.save(debitedAccount);
++    var transfer = new TransferRecord(UUID.randomUUID().toString(), accountId, amount, clock.instant());
+     repository.save(transfer);
+     return transfer;
+   }
+
+-  public java.util.List<TransferRecord> history(
+-      String accountId, Instant fromInclusive, Instant toExclusive) {
++  public java.util.List<TransferRecord> history(String accountId,
++      Instant fromInclusive, Instant toExclusive) {
+     return repository.findByAccountIdAndOccurredAtBetween(accountId, fromInclusive, toExclusive);
+   }
+ }

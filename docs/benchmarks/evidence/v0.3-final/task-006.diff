@@ -1,0 +1,51 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+@@ -6,4 +6,8 @@
+   void save(Order order);
+
+   Optional<Order> findById(String id);
+-}
++
++  default Optional<Order> findByRequestId(String requestId) {
++    throw new UnsupportedOperationException("Not supported in this implementation.");
++  }
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+@@ -14,15 +14,14 @@
+   }
+
+   public Order create(String requestId, String sku, int quantity, String paymentToken) {
+-    var order =
+-        new Order(
+-            UUID.randomUUID().toString(),
+-            requestId,
+-            sku,
+-            quantity,
+-            OrderStatus.CREATED,
+-            paymentToken,
+-            clock.instant());
++    var order = new Order(
++        UUID.randomUUID().toString(),
++        requestId,
++        sku,
++        quantity,
++        OrderStatus.CREATED,
++        paymentToken,
++        clock.instant());
+     repository.save(order);
+     return order;
+   }
+@@ -34,4 +33,8 @@
+   public Optional<Order> find(String id) {
+     return repository.findById(id);
+   }
+-}
++
++  public Optional<Order> findByRequestId(String requestId) {
++    return repository.findByRequestId(requestId);
++  }
++}
+\ No newline at end of file

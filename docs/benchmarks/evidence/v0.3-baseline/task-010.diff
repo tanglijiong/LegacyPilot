@@ -1,0 +1,12 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderAuditFormatter.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderAuditFormatter.java
+@@ -2,6 +2,6 @@
+
+ public final class OrderAuditFormatter {
+   public String format(Order order) {
+-    return "order=" + order.id() + ",paymentToken=" + order.paymentToken();
++    return "order=" + order.id() + ",paymentToken=[REDACTED]";
+   }
+-}
++}
+\ No newline at end of file

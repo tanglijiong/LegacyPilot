@@ -1,0 +1,20 @@
+--- a/src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
++++ b/src/main/java/io/legacypilot/fixtures/jobs/JobRequestParser.java
+@@ -2,6 +2,14 @@
+
+ public final class JobRequestParser {
+   public int parsePriority(String value) {
+-    return Integer.parseInt(value);
++    try {
++      int priority = Integer.parseInt(value.trim());
++      if (priority < 1 || priority > 5) {
++        throw new IllegalArgumentException("INVALID_PRIORITY");
++      }
++      return priority;
++    } catch (NumberFormatException e) {
++      throw new IllegalArgumentException("INVALID_PRIORITY");
++    }
+   }
+-}
++}
+\ No newline at end of file

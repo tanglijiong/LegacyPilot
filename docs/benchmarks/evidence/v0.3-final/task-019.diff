@@ -1,0 +1,5 @@
+--- a/src/main/resources/db/migration/V2__transfer_history_index.sql
++++ b/src/main/resources/db/migration/V2__transfer_history_index.sql
+@@ -0,0 +1 @@
++CREATE INDEX idx_transfer_account_id_occurred_at ON transfer (account_id, occurred_at);
+\ No newline at end of file

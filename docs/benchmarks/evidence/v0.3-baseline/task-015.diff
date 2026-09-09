@@ -1,0 +1,22 @@
+--- a/src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
++++ b/src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+@@ -1,10 +1,15 @@
+ package io.legacypilot.fixtures.jobs;
+
++import java.util.Comparator;
+ import java.util.List;
+
+ public final class JobQueryService {
+   public List<Job> page(List<Job> jobs, int offset, int limit) {
+-    var end = Math.min(jobs.size(), offset + limit);
+-    return jobs.subList(offset, end);
++    if (offset < 0) throw new IllegalArgumentException("Offset must be non-negative");
++    if (limit <= 0) throw new IllegalArgumentException("Limit must be positive");
++    if (offset >= jobs.size()) return List.of();
++    var ordered = jobs.stream().sorted(Comparator.comparing(Job::scheduledAt).thenComparing(Job::id)).toList();
++    var end = Math.min(ordered.size(), offset + limit);
++    return ordered.subList(offset, end);
+   }
+-}
++}
+\ No newline at end of file

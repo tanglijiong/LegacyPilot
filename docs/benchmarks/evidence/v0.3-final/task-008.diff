@@ -1,0 +1,107 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderController.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderController.java
+@@ -1,13 +1,19 @@
+ package io.legacypilot.fixtures.orders;
+
+ public final class OrderController {
+-  private final OrderService service;
++    private final OrderService service;
+
+-  public OrderController(OrderService service) {
+-    this.service = service;
+-  }
++    public OrderController(OrderService service) {
++        this.service = service;
++    }
+
+-  public ApiResponse get(String id) {
+-    return ApiResponse.ok(service.get(id));
+-  }
+-}
++    public ApiResponse get(String id) {
++        try {
++            return ApiResponse.ok(service.get(id));
++        } catch (IllegalArgumentException e) {
++            return ApiResponse.notFound(ORDER_NOT_FOUND);
++        }
++    }
++
++    public static final String ORDER_NOT_FOUND = "Order not found";
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderNotFoundException.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderNotFoundException.java
+@@ -0,0 +1,13 @@
++package io.legacypilot.fixtures.orders;
++
++public class OrderNotFoundException extends RuntimeException {
++    public OrderNotFoundException() {
++        super(ORDER_NOT_FOUND);
++    }
++
++    public OrderNotFoundException(String message) {
++        super(message);
++    }
++
++    public static final String ORDER_NOT_FOUND = "Order not found";
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+@@ -5,17 +5,16 @@
+ import java.util.UUID;
+
+ public final class OrderService {
+-  private final OrderRepository repository;
+-  private final Clock clock;
++    private final OrderRepository repository;
++    private final Clock clock;
+
+-  public OrderService(OrderRepository repository, Clock clock) {
+-    this.repository = repository;
+-    this.clock = clock;
+-  }
++    public OrderService(OrderRepository repository, Clock clock) {
++        this.repository = repository;
++        this.clock = clock;
++    }
+
+-  public Order create(String requestId, String sku, int quantity, String paymentToken) {
+-    var order =
+-        new Order(
++    public Order create(String requestId, String sku, int quantity, String paymentToken) {
++        var order = new Order(
+             UUID.randomUUID().toString(),
+             requestId,
+             sku,
+@@ -23,15 +22,17 @@
+             OrderStatus.CREATED,
+             paymentToken,
+             clock.instant());
+-    repository.save(order);
+-    return order;
+-  }
++        repository.save(order);
++        return order;
++    }
+
+-  public Order get(String id) {
+-    return repository.findById(id).orElseThrow(IllegalArgumentException::new);
+-  }
++    public Order get(String id) {
++        return repository.findById(id).orElseThrow(() -> new OrderNotFoundException(ORDER_NOT_FOUND));
++    }
+
+-  public Optional<Order> find(String id) {
+-    return repository.findById(id);
+-  }
+-}
++    public Optional<Order> find(String id) {
++        return repository.findById(id);
++    }
++
++    public static final String ORDER_NOT_FOUND = "Order not found";
++}
+\ No newline at end of file

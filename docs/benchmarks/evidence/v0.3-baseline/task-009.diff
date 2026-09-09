@@ -1,0 +1,72 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderRepository.java
+@@ -1,9 +1,14 @@
+ package io.legacypilot.fixtures.orders;
+
++import java.time.Instant;
+ import java.util.Optional;
+
+ public interface OrderRepository {
+   void save(Order order);
+
+   Optional<Order> findById(String id);
+-}
++
++  default Optional<Order> findByCreatedAtBetween(Instant fromInclusive, Instant toExclusive) {
++    throw new UnsupportedOperationException("Not supported yet.");
++  }
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+@@ -1,6 +1,7 @@
+ package io.legacypilot.fixtures.orders;
+
+ import java.time.Clock;
++import java.time.Instant;
+ import java.util.Optional;
+ import java.util.UUID;
+
+@@ -14,24 +15,28 @@
+   }
+
+   public Order create(String requestId, String sku, int quantity, String paymentToken) {
+-    var order =
+-        new Order(
+-            UUID.randomUUID().toString(),
+-            requestId,
+-            sku,
+-            quantity,
+-            OrderStatus.CREATED,
+-            paymentToken,
+-            clock.instant());
++    var order = new Order(
++        UUID.randomUUID().toString(),
++        requestId,
++        sku,
++        quantity,
++        OrderStatus.CREATED,
++        paymentToken,
++        clock.instant());
+     repository.save(order);
+     return order;
+   }
+
+-  public Order get(String id) {
+-    return repository.findById(id).orElseThrow(IllegalArgumentException::new);
++  public Optional<Order> findByHistoryRange(String fromInclusive, String toExclusive) {
++    var from = Instant.parse(fromInclusive);
++    var to = Instant.parse(toExclusive);
++    if (!to.isAfter(from)) {
++      throw new IllegalArgumentException("INVALID_HISTORY_RANGE");
++    }
++    return repository.findByCreatedAtBetween(from, to);
+   }
+
+   public Optional<Order> find(String id) {
+     return repository.findById(id);
+   }
+-}
++}
+\ No newline at end of file

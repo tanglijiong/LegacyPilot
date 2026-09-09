@@ -1,0 +1,100 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/Order.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/Order.java
+@@ -1,7 +1,5 @@
+ package io.legacypilot.fixtures.orders;
+
+-import java.time.Instant;
+-
+ public record Order(
+     String id,
+     String requestId,
+@@ -9,4 +7,7 @@
+     int quantity,
+     OrderStatus status,
+     String paymentToken,
+-    Instant createdAt) {}
++    Instant createdAt) {
++
++    public static final String ORDER_ALREADY_COMPLETED = "Order is already completed";
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderService.java
+@@ -5,17 +5,16 @@
+ import java.util.UUID;
+
+ public final class OrderService {
+-  private final OrderRepository repository;
+-  private final Clock clock;
++    private final OrderRepository repository;
++    private final Clock clock;
+
+-  public OrderService(OrderRepository repository, Clock clock) {
+-    this.repository = repository;
+-    this.clock = clock;
+-  }
++    public OrderService(OrderRepository repository, Clock clock) {
++        this.repository = repository;
++        this.clock = clock;
++    }
+
+-  public Order create(String requestId, String sku, int quantity, String paymentToken) {
+-    var order =
+-        new Order(
++    public Order create(String requestId, String sku, int quantity, String paymentToken) {
++        var order = new Order(
+             UUID.randomUUID().toString(),
+             requestId,
+             sku,
+@@ -23,15 +22,39 @@
+             OrderStatus.CREATED,
+             paymentToken,
+             clock.instant());
+-    repository.save(order);
+-    return order;
+-  }
++        repository.save(order);
++        return order;
++    }
+
+-  public Order get(String id) {
+-    return repository.findById(id).orElseThrow(IllegalArgumentException::new);
+-  }
++    public Order get(String id) {
++        return repository.findById(id).orElseThrow(IllegalArgumentException::new);
++    }
+
+-  public Optional<Order> find(String id) {
+-    return repository.findById(id);
+-  }
+-}
++    public Optional<Order> find(String id) {
++        return repository.findById(id);
++    }
++
++    public ApiResponse cancel(String id) {
++        var currentOrder = repository.findById(id);
++        if (!currentOrder.isPresent()) {
++            throw new IllegalArgumentException("Order not found");
++        }
++        var order = currentOrder.get();
++        if (order.status() == OrderStatus.COMPLETED) {
++            return ApiResponse.notFound(Order.ORDER_ALREADY_COMPLETED);
++        }
++        var cancelled = new Order(
++            order.id(),
++            order.requestId(),
++            order.sku(),
++            order.quantity(),
++            OrderStatus.CANCELLED,
++            order.paymentToken(),
++            order.createdAt());
++        if (order.status() != OrderStatus.CREATED) {
++            return ApiResponse.notFound(Order.ORDER_ALREADY_COMPLETED);
++        }
++        repository.save(cancelled);
++        return ApiResponse.ok(cancelled);
++    }
++}
+\ No newline at end of file

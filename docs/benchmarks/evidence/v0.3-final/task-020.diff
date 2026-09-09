@@ -1,0 +1,35 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+@@ -0,0 +1,31 @@
++package io.legacypilot.fixtures.orders;
++
++import java.security.MessageDigest;
++import java.util.Base64;
++
++public class OrderWebhookVerifier {
++
++    public static boolean verifyHmac(String payload, String secret, String signature) {
++        if (payload == null || secret == null || signature == null) {
++            return false;
++        }
++
++        String algorithm = "HmacSHA256";
++        String computedSignature = computeHmacSignature(payload, secret, algorithm);
++
++        return MessageDigest.isEqual(Base64.getDecoder().decode(signature), Base64.getDecoder().decode(computedSignature));
++    }
++
++    private static String computeHmacSignature(String payload, String secret, String algorithm) {
++        try {
++            byte[] secretKeyBytes = secret.getBytes();
++            byte[] payloadBytes = payload.getBytes();
++            MessageDigest messageDigest = MessageDigest.getInstance(algorithm);
++            messageDigest.update(secretKeyBytes);
++            byte[] hmacBytes = messageDigest.digest(payloadBytes);
++            return Base64.getEncoder().encodeToString(hmacBytes);
++        } catch (Exception e) {
++            throw new IllegalArgumentException("Failed to compute HMAC signature", e);
++        }
++    }
++}
+\ No newline at end of file

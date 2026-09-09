@@ -1,0 +1,46 @@
+--- a/src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
++++ b/src/main/java/io/legacypilot/fixtures/orders/OrderWebhookVerifier.java
+@@ -0,0 +1,42 @@
++package io.legacypilot.fixtures.orders;
++
++import java.security.MessageDigest;
++import java.util.Base64;
++import javax.crypto.Mac;
++import javax.crypto.spec.SecretKeySpec;
++
++public class OrderWebhookVerifier {
++
++    private static final String HMAC_SHA256 = "HmacSHA256";
++
++    public static boolean verifyHmac(String secret, String payload, String signature) {
++        if (secret == null || payload == null || signature == null) {
++            return false;
++        }
++
++        String generatedSignature = generateHmacSignature(secret, payload);
++        return MessageDigest.isEqual(parseHex(signature), parseHex(generatedSignature));
++    }
++
++    private static String generateHmacSignature(String secret, String payload) {
++        try {
++            SecretKeySpec signingKey = new SecretKeySpec(secret.getBytes(), HMAC_SHA256);
++            Mac mac = Mac.getInstance(HMAC_SHA256);
++            mac.init(signingKey);
++            byte[] rawHmac = mac.doFinal(payload.getBytes());
++            return Base64.getEncoder().encodeToString(rawHmac);
++        } catch (Exception e) {
++            throw new RuntimeException("Failed to generate HMAC signature", e);
++        }
++    }
++
++    private static byte[] parseHex(String hex) {
++        int len = hex.length();
++        byte[] data = new byte[len / 2];
++        for (int i = 0; i < len; i += 2) {
++            data[i / 2] = (byte) ((Character.digit(hex.charAt(i), 16) << 4)
++                    + Character.digit(hex.charAt(i + 1), 16));
++        }
++        return data;
++    }
++}
+\ No newline at end of file

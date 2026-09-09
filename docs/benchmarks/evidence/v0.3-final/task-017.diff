@@ -1,0 +1,46 @@
+--- a/src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
++++ b/src/main/java/io/legacypilot/fixtures/jobs/JobQueryService.java
+@@ -3,8 +3,19 @@
+ import java.util.List;
+
+ public final class JobQueryService {
+-  public List<Job> page(List<Job> jobs, int offset, int limit) {
+-    var end = Math.min(jobs.size(), offset + limit);
+-    return jobs.subList(offset, end);
++  private final JobRepository repository;
++
++  public JobQueryService(JobRepository repository) {
++    this.repository = repository;
+   }
+-}
++
++  public List<Job> findReadyScheduledBefore(java.time.Instant dueExclusive, int limit) {
++    if (limit < 1) {
++      throw new IllegalArgumentException("Limit must be at least 1");
++    }
++    if (limit > 100) {
++      throw new IllegalArgumentException("Limit must not exceed 100");
++    }
++    return repository.findReadyScheduledBefore(dueExclusive, limit);
++  }
++}
+\ No newline at end of file
+
+--- a/src/main/java/io/legacypilot/fixtures/jobs/JobRepository.java
++++ b/src/main/java/io/legacypilot/fixtures/jobs/JobRepository.java
+@@ -1,9 +1,12 @@
+ package io.legacypilot.fixtures.jobs;
+
++import java.util.List;
+ import java.util.Optional;
+
+ public interface JobRepository {
+   void save(Job job);
+-
+   Optional<Job> findById(String id);
+-}
++  default List<Job> findReadyScheduledBefore(java.time.Instant dueExclusive, int limit) {
++    throw new UnsupportedOperationException("Not implemented yet");
++  }
++}
+\ No newline at end of file
