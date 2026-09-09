@@ -319,6 +319,35 @@ def response_object(response: dict) -> dict:
     return value
 
 
+def resilient_plan(
+    prompt: str,
+    context: str,
+    served_name: str,
+    allowed_files: list[str],
+    required_files: list[str],
+    acceptance: list[str],
+    usage: dict[str, int],
+) -> tuple[dict, str]:
+    try:
+        response = planning_completion(
+            prompt, context, served_name, allowed_files, required_files, acceptance
+        )
+        add_usage(usage, response)
+        return response_object(response), "completed"
+    except (ValueError, OSError, json.JSONDecodeError, urllib.error.URLError) as error:
+        return (
+            {
+                "plan": [
+                    "Inspect callers and tests, preserve existing APIs, implement the requirement, "
+                    "then compile and test the complete workspace."
+                ],
+                "risks": ["Planning model output was unavailable; use conservative maintenance."],
+                "preserved_api": [],
+            },
+            f"fallback: {error}",
+        )
+
+
 def safe_target(workspace: Path, raw: str) -> Path:
     if not isinstance(raw, str) or not raw.startswith(ALLOWED_ROOTS):
         raise ValueError("model attempted to write outside production source")
@@ -481,26 +510,26 @@ def main() -> int:
             wait_until_ready(process, log_path)
         usage = {"input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
         context, selected_context = source_context(workspace)
-        planning_response = planning_completion(
+        plan, planning_result = resilient_plan(
             prompt,
             context,
             args.served_model_name,
             args.allowed_file,
             args.required_file,
             args.acceptance,
+            usage,
         )
-        add_usage(usage, planning_response)
-        plan = response_object(planning_response)
         trace = {
             "requirement": prompt,
             "selectedContext": selected_context,
             "plan": plan,
-            "toolCalls": [{"tool": "model.plan", "result": "completed"}],
+            "toolCalls": [{"tool": "model.plan", "result": planning_result}],
             "attempts": [],
             "model": args.served_model_name,
             "reasoningEffort": args.reasoning_effort,
         }
         feedback = ""
+        touched_files: set[str] = set()
         for attempt in range(3):
             attempt_trace: dict[str, object] = {"attempt": attempt + 1}
             try:
@@ -521,12 +550,18 @@ def main() -> int:
                     workspace,
                     payload,
                     args.allowed_file,
-                    args.required_file,
+                    [],
                 )
-                failures = public_failures(workspace, args.acceptance) + build_failures(workspace)
+                modified_files = [item["path"] for item in payload["files"]]
+                touched_files.update(modified_files)
+                missing_required = sorted(set(args.required_file) - touched_files)
+                failures = [
+                    "Required file has not been changed: " + path for path in missing_required
+                ]
+                failures += public_failures(workspace, args.acceptance) + build_failures(workspace)
                 attempt_trace.update(
                     {
-                        "modifiedFiles": [item["path"] for item in payload["files"]],
+                        "modifiedFiles": modified_files,
                         "publicVerification": "passed" if not failures else "failed",
                         "failures": failures,
                     }

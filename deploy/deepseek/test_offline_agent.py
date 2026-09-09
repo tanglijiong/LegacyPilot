@@ -15,6 +15,19 @@ import start_model_service
 
 
 class OfflineAgentTest(unittest.TestCase):
+    def test_planning_failure_uses_a_conservative_fallback(self):
+        usage = {"input_tokens": 0, "output_tokens": 0, "reasoning_output_tokens": 0}
+        with mock.patch.object(
+            model_agent, "planning_completion", side_effect=ValueError("invalid plan")
+        ):
+            plan, result = model_agent.resilient_plan(
+                "requirement", "context", "model", [], [], [], usage
+            )
+
+        self.assertIn("fallback:", result)
+        self.assertTrue(plan["plan"])
+        self.assertEqual(0, usage["input_tokens"])
+
     def test_main_passes_governed_task_constraints_to_completion(self):
         with tempfile.TemporaryDirectory() as root:
             workspace = Path(root)
