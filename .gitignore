@@ -1,6 +1,12 @@
 # Build output
 target/
 **/target/
+node_modules/
+**/node_modules/
+apps/web/dist/
+*.tsbuildinfo
+.playwright-cli/
+**/output/playwright/
 __pycache__/
 *.py[cod]
 
@@ -24,6 +30,7 @@ application-local.yml
 
 # LegacyPilot runtime data
 .legacy-pilot/
+.legacy-pilot-demo/
 workspaces/
 traces/
 

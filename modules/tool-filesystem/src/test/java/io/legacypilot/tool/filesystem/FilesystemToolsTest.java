@@ -45,7 +45,7 @@ class FilesystemToolsTest {
             MAPPER.readTree(
                 "{\"path\":\"src/main/java/Example.java\",\"startLine\":2,\"endLine\":2}"));
     assertEquals("  Example field;", output.path("content").asText());
-    assertTrue(output.path("truncated").asBoolean());
+    assertFalse(output.path("truncated").asBoolean());
     assertThrows(
         ToolFailureException.class,
         () -> tool.execute(context, MAPPER.readTree("{\"path\":\"../outside\"}")));
@@ -104,6 +104,152 @@ class FilesystemToolsTest {
   }
 
   @Test
+  void createsAndAppliesCompactRangePatch() throws Exception {
+    var create = new CreatePatchTool();
+    var apply = new ApplyPatchTool(List.of("src/**"));
+    var patch =
+        create.execute(
+            context,
+            MAPPER.readTree(
+                """
+                {"path":"src/main/java/Example.java","startLine":2,"endLine":2,
+                 "replacement":"  private final Example field;"}
+                """));
+
+    assertEquals("RANGE", patch.path("patchMode").asText());
+    assertEquals("  private final Example field;", patch.path("replacement").asText());
+    var applyInput =
+        MAPPER
+            .createObjectNode()
+            .put("path", patch.path("path").asText())
+            .put("expectedSha256", patch.path("expectedSha256").asText())
+            .put("replacement", patch.path("replacement").asText())
+            .put("startLine", patch.path("startLine").asInt())
+            .put("endLine", patch.path("endLine").asInt());
+
+    apply.execute(context, applyInput);
+
+    assertEquals("class Example {\n  private final Example field;\n}\n", Files.readString(source));
+  }
+
+  @Test
+  void rejectsJavaRangeThatCrossesStructuralIndentation() throws Exception {
+    var failure =
+        assertThrows(
+            ToolFailureException.class,
+            () ->
+                new CreatePatchTool()
+                    .execute(
+                        context,
+                        MAPPER.readTree(
+                            """
+                            {"path":"src/main/java/Example.java","startLine":2,"endLine":2,
+                             "replacement":"private Example replacement;"}
+                            """)));
+
+    assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
+  }
+
+  @Test
+  void rejectsPlaceholderReplacementsForExistingSourceFiles() throws Exception {
+    Files.writeString(
+        source,
+        "package example;\npublic class Example {\n"
+            + "  private final String value = \""
+            + "x".repeat(500)
+            + "\";\n}\n");
+
+    var failure =
+        assertThrows(
+            ToolFailureException.class,
+            () ->
+                new CreatePatchTool()
+                    .execute(
+                        context,
+                        MAPPER.readTree(
+                            "{\"path\":\"src/main/java/Example.java\",\"replacement\":\"优化后的代码\"}")));
+
+    assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
+
+    var rangedFailure =
+        assertThrows(
+            ToolFailureException.class,
+            () ->
+                new CreatePatchTool()
+                    .execute(
+                        context,
+                        MAPPER.readTree(
+                            """
+                            {"path":"src/main/java/Example.java","startLine":2,"endLine":2,
+                             "replacement":"  // 其他代码..."}
+                            """)));
+    assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, rangedFailure.code());
+  }
+
+  @Test
+  void rejectsNoOpPatchForExistingFile() throws Exception {
+    var failure =
+        assertThrows(
+            ToolFailureException.class,
+            () ->
+                new CreatePatchTool()
+                    .execute(
+                        context,
+                        MAPPER
+                            .createObjectNode()
+                            .put("path", "src/main/java/Example.java")
+                            .put("replacement", Files.readString(source))));
+
+    assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
+  }
+
+  @Test
+  void rejectsIncompleteNewJavaFile() throws Exception {
+    var failure =
+        assertThrows(
+            ToolFailureException.class,
+            () ->
+                new CreatePatchTool()
+                    .execute(
+                        context,
+                        MAPPER.readTree(
+                            "{\"path\":\"src/main/java/Calculator.java\",\"replacement\":\"package example;\"}")));
+
+    assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
+  }
+
+  @Test
+  void rejectsTruncatedNewJavaSource() throws Exception {
+    var failure =
+        assertThrows(
+            ToolFailureException.class,
+            () ->
+                new CreatePatchTool()
+                    .execute(
+                        context,
+                        MAPPER.readTree(
+                            "{\"path\":\"src/main/java/Calculator.java\",\"replacement\":\"public class Calculator {\\n  public void calculate() {\\n\"}")));
+
+    assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
+  }
+
+  @Test
+  void rejectsNewJavaFileWhosePackageDoesNotMatchItsDirectory() throws Exception {
+    Files.createDirectories(workspace.resolve("src/main/java/example"));
+    var failure =
+        assertThrows(
+            ToolFailureException.class,
+            () ->
+                new CreatePatchTool()
+                    .execute(
+                        context,
+                        MAPPER.readTree(
+                            "{\"path\":\"src/main/java/example/Calculator.java\",\"replacement\":\"public class Calculator {}\"}")));
+
+    assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
+  }
+
+  @Test
   void deniesNonWritableTargetsAndSymlinkEscapes() throws Exception {
     var apply = new ApplyPatchTool(List.of("src/**"));
     var digest = PatchSupport.sha256("Example");
@@ -154,5 +300,20 @@ class FilesystemToolsTest {
 
     assertEquals(
         "record NewType() {}\n", Files.readString(workspace.resolve("src/main/java/NewType.java")));
+  }
+
+  @Test
+  void treatsAccidentalRangeCoordinatesOnNewFileAsFullFilePatch() throws Exception {
+    var patch =
+        new CreatePatchTool()
+            .execute(
+                context,
+                MAPPER.readTree(
+                    "{\"path\":\"src/main/java/AnotherType.java\",\"startLine\":1,\"endLine\":12,\"replacement\":\"final class AnotherType {}\\n\"}"));
+
+    assertTrue(patch.path("createsFile").asBoolean());
+    assertEquals("FULL_FILE", patch.path("patchMode").asText());
+    assertFalse(patch.has("startLine"));
+    assertFalse(patch.has("endLine"));
   }
 }

@@ -2,7 +2,7 @@ package io.legacypilot.domain.project;
 
 import java.util.Objects;
 
-/** User-provided local path or public HTTP(S) Git repository URL. */
+/** Local project path, managed directory snapshot token, or public HTTP(S) Git repository URL. */
 public record RepositoryLocation(String value) {
 
   public RepositoryLocation {

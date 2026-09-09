@@ -24,6 +24,7 @@ public final class ReportRenderer {
     var output = new StringBuilder();
     output.append("# LegacyPilot Run ").append(report.runId()).append("\n\n");
     output.append("- Status: **").append(report.status()).append("**\n");
+    output.append("- Task mode: **").append(report.taskMode()).append("**\n");
     output.append("- Risk: **").append(report.risk()).append("**\n");
     output.append("- Steps: ").append(report.steps()).append("\n");
     output.append("- Model tokens: ").append(report.modelTokens()).append("\n");
@@ -44,6 +45,42 @@ public final class ReportRenderer {
                     .append(" — ")
                     .append(check.getOrDefault("evidence", ""))
                     .append("\n"));
+    if (report.artifact() != null) {
+      output.append("\n## Result\n\n").append(report.artifact().summary()).append("\n");
+      report
+          .artifact()
+          .sections()
+          .forEach(
+              (name, values) -> {
+                output.append("\n### ").append(name).append("\n\n");
+                values.forEach(value -> output.append("- ").append(value).append("\n"));
+              });
+      output.append("\n### Source evidence\n\n");
+      report
+          .artifact()
+          .evidence()
+          .forEach(
+              evidence ->
+                  output
+                      .append("- ")
+                      .append(evidence.claim())
+                      .append(" — `")
+                      .append(evidence.path())
+                      .append(":")
+                      .append(evidence.startLine())
+                      .append("` (`")
+                      .append(evidence.symbol())
+                      .append("`) — excerpt: `")
+                      .append(evidence.excerpt().replace("`", "'"))
+                      .append("`\n"));
+      if (!report.artifact().unknowns().isEmpty()) {
+        output.append("\n### Unknowns\n\n");
+        report
+            .artifact()
+            .unknowns()
+            .forEach(value -> output.append("- ").append(value).append("\n"));
+      }
+    }
     return output.toString();
   }
 }

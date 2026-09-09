@@ -1,6 +1,7 @@
 package io.legacypilot.cli;
 
 import io.legacypilot.application.service.CreateTaskUseCase;
+import io.legacypilot.domain.task.TaskMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -21,6 +22,9 @@ public class TaskCreateCommand implements Callable<Integer> {
   @Option(names = "--requirement", required = true)
   private String requirement;
 
+  @Option(names = "--mode", defaultValue = "CHANGE", description = "CHANGE, ANALYZE, or EXPLAIN")
+  private TaskMode mode;
+
   @Option(names = "--criterion")
   private List<String> criteria = new ArrayList<>();
 
@@ -31,7 +35,7 @@ public class TaskCreateCommand implements Callable<Integer> {
 
   @Override
   public Integer call() {
-    output.write(useCase.create(projectId, requirement, criteria));
+    output.write(useCase.create(projectId, mode, requirement, criteria));
     return 0;
   }
 }

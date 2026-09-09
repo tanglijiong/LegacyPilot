@@ -1,0 +1,31 @@
+{
+  "candidate": "0.3.0-rc.1",
+  "decision": "PRODUCT_DEMO_ACCEPTED_MODEL_QUALITY_NOT_MET",
+  "bankingFixtureRevision": "ee79b3282e22aaf419a137666a57a2b1b3f4f875",
+  "liveDemoModel": {
+    "adapter": "local-http",
+    "model": "hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m",
+    "reasoningEffort": "high",
+    "networkBoundary": "loopback"
+  },
+  "automatedRehearsalModel": {
+    "adapter": "deterministic-openai-compatible-fixture",
+    "purpose": "product-control-plane-rehearsal-only"
+  },
+  "qualityGate": {
+    "dataset": "v0.3-core.1",
+    "score": 9,
+    "total": 20,
+    "required": 14,
+    "passed": false
+  },
+  "productGates": [
+    "java-verify",
+    "web-production-build",
+    "real-backend-browser-e2e",
+    "security-negative-regression",
+    "accessibility-regression",
+    "three-run-interview-rehearsal",
+    "public-material-safety-check"
+  ]
+}

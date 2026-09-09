@@ -126,8 +126,12 @@ public final class UnixSocketRawModelClient implements RawModelClient {
             request.model(),
             "temperature",
             request.temperature(),
+            "max_tokens",
+            1800,
             "stream",
             false,
+            "response_format",
+            Map.of("type", "json_object"),
             "messages",
             List.of(
                 Map.of("role", "system", "content", system),

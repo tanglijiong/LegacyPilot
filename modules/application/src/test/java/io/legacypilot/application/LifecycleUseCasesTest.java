@@ -4,9 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.legacypilot.application.error.ResourceNotFoundException;
+import io.legacypilot.application.execution.RunExecutionCommand;
+import io.legacypilot.application.port.DirectorySnapshotFile;
 import io.legacypilot.application.port.IdGenerator;
 import io.legacypilot.application.port.ProjectRepository;
 import io.legacypilot.application.port.RegisteredRepository;
+import io.legacypilot.application.port.RepositoryInspection;
 import io.legacypilot.application.port.TaskRepository;
 import io.legacypilot.application.port.TaskRunRepository;
 import io.legacypilot.application.port.WorkspaceDescriptor;
@@ -16,7 +19,11 @@ import io.legacypilot.application.service.CreateTaskUseCase;
 import io.legacypilot.application.service.GetProjectUseCase;
 import io.legacypilot.application.service.GetRunStatusUseCase;
 import io.legacypilot.application.service.GetTaskUseCase;
+import io.legacypilot.application.service.InspectProjectUseCase;
+import io.legacypilot.application.service.ListProjectTasksUseCase;
+import io.legacypilot.application.service.ListProjectsUseCase;
 import io.legacypilot.application.service.RegisterProjectUseCase;
+import io.legacypilot.application.service.RemoveProjectUseCase;
 import io.legacypilot.application.service.StartRunUseCase;
 import io.legacypilot.domain.project.GitRevision;
 import io.legacypilot.domain.project.Project;
@@ -28,10 +35,12 @@ import io.legacypilot.domain.run.TaskRun;
 import io.legacypilot.domain.run.WorkspaceId;
 import io.legacypilot.domain.task.Task;
 import io.legacypilot.domain.task.TaskId;
+import io.legacypilot.domain.task.TaskMode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,18 +69,30 @@ class LifecycleUseCasesTest {
 
   @Test
   void executesRegistrationTaskRunStatusAndCancellationFlow() {
+    var inspection = new InspectProjectUseCase(workspace).inspect("/repo", "HEAD");
+    assertEquals("NOT_A_REQUIREMENT", inspection.warnings().getFirst());
     var project =
         new RegisterProjectUseCase(store, workspace, ids, clock).register("/repo", "HEAD");
+    var duplicate =
+        new RegisterProjectUseCase(store, workspace, ids, clock).register("/repo", "HEAD");
+    assertEquals(project, duplicate);
+    assertEquals(1, store.projects.size());
     var task =
         new CreateTaskUseCase(store, store, ids, clock)
-            .create(project.id().value(), "make a safe change", null);
+            .create(project.id().value(), TaskMode.EXPLAIN, "explain the transfer flow", null);
     var run =
         new StartRunUseCase(store, store, store, workspace, ids, clock).start(task.id().value());
 
     assertEquals(project, new GetProjectUseCase(store).get(project.id().value()));
     assertEquals(task, new GetTaskUseCase(store).get(task.id().value()));
+    assertEquals(TaskMode.EXPLAIN, task.mode());
     assertEquals(RunStatus.WORKSPACE_READY, run.status());
     assertEquals(run, new GetRunStatusUseCase(store).get(run.id().value()));
+    assertEquals(List.of(project), new ListProjectsUseCase(store).list());
+    var listed = new ListProjectTasksUseCase(store, store).list(project.id().value());
+    assertEquals(task, listed.getFirst());
+    assertEquals(
+        run, new GetRunStatusUseCase(store).latestForTask(task.id().value()).orElseThrow());
 
     var cancelled =
         new CancelRunUseCase(store, store, store, workspace, clock).cancel(run.id().value());
@@ -95,6 +116,22 @@ class LifecycleUseCasesTest {
   }
 
   @Test
+  void removesAProjectFromTheActiveCatalogWithoutDeletingItsHistory() {
+    var project = new RegisterProjectUseCase(store, workspace, ids, clock).register("/repo", null);
+    var task =
+        new CreateTaskUseCase(store, store, ids, clock)
+            .create(project.id().value(), TaskMode.EXPLAIN, "explain", null);
+
+    new RemoveProjectUseCase(store).remove(project.id().value());
+
+    assertEquals(List.of(), new ListProjectsUseCase(store).list());
+    assertEquals(task, store.tasks.get(task.id()));
+    assertThrows(
+        ResourceNotFoundException.class,
+        () -> new RemoveProjectUseCase(store).remove(project.id().value()));
+  }
+
+  @Test
   void persistsFailedStateWhenWorkspaceCreationFails() {
     var project = new RegisterProjectUseCase(store, workspace, ids, clock).register("/repo", null);
     var task =
@@ -108,6 +145,87 @@ class LifecycleUseCasesTest {
             new StartRunUseCase(store, store, store, workspace, ids, clock)
                 .start(task.id().value()));
     assertEquals(RunStatus.FAILED, store.runs.values().iterator().next().status());
+  }
+
+  @Test
+  void keepsFollowUpTasksInTheSameProjectConversation() {
+    var project = new RegisterProjectUseCase(store, workspace, ids, clock).register("/repo", null);
+    var useCase = new CreateTaskUseCase(store, store, ids, clock);
+    var first = useCase.create(project.id().value(), TaskMode.ANALYZE, "first question", null);
+    var followUp =
+        useCase.create(
+            project.id().value(),
+            TaskMode.EXPLAIN,
+            "follow-up question",
+            null,
+            first.conversationId());
+
+    assertEquals(first.id().value(), first.conversationId());
+    assertEquals(first.conversationId(), followUp.conversationId());
+    assertThrows(
+        ResourceNotFoundException.class,
+        () ->
+            useCase.create(
+                project.id().value(), TaskMode.ANALYZE, "invalid follow-up", null, "missing"));
+  }
+
+  @Test
+  void validatesDurableExecutionCommands() {
+    var command =
+        new RunExecutionCommand(
+            "command-1",
+            "run-1",
+            RunExecutionCommand.Operation.EXECUTE,
+            2,
+            "execute-run-1",
+            "developer-a",
+            "correlation-1",
+            RunExecutionCommand.Status.QUEUED,
+            0,
+            null,
+            null,
+            null,
+            NOW,
+            NOW);
+
+    assertEquals("", command.error());
+    assertEquals("run-1", command.runId());
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new RunExecutionCommand(
+                "",
+                "run-1",
+                RunExecutionCommand.Operation.RESUME,
+                -1,
+                "resume-run-1",
+                "developer-a",
+                "correlation-1",
+                RunExecutionCommand.Status.FAILED,
+                -1,
+                null,
+                null,
+                "failed",
+                NOW,
+                NOW));
+    assertThrows(
+        NullPointerException.class,
+        () ->
+            new RunExecutionCommand(
+                null,
+                "run-1",
+                RunExecutionCommand.Operation.EXECUTE,
+                0,
+                "key",
+                "actor",
+                "correlation",
+                RunExecutionCommand.Status.COMPLETED,
+                0,
+                null,
+                null,
+                "",
+                NOW,
+                NOW));
   }
 
   private static final class MemoryStore
@@ -127,6 +245,16 @@ class LifecycleUseCasesTest {
     }
 
     @Override
+    public List<Project> findAll() {
+      return List.copyOf(projects.values());
+    }
+
+    @Override
+    public void remove(ProjectId id) {
+      projects.remove(id);
+    }
+
+    @Override
     public void add(Task task) {
       tasks.put(task.id(), task);
     }
@@ -134,6 +262,11 @@ class LifecycleUseCasesTest {
     @Override
     public Optional<Task> findById(TaskId id) {
       return Optional.ofNullable(tasks.get(id));
+    }
+
+    @Override
+    public List<Task> findByProjectId(ProjectId projectId) {
+      return tasks.values().stream().filter(task -> task.projectId().equals(projectId)).toList();
     }
 
     @Override
@@ -153,6 +286,11 @@ class LifecycleUseCasesTest {
     public Optional<TaskRun> findById(RunId id) {
       return Optional.ofNullable(runs.get(id));
     }
+
+    @Override
+    public Optional<TaskRun> findLatestByTaskId(TaskId taskId) {
+      return runs.values().stream().filter(run -> run.taskId().equals(taskId)).findFirst();
+    }
   }
 
   private static final class FakeWorkspace implements WorkspaceService {
@@ -160,9 +298,28 @@ class LifecycleUseCasesTest {
     private int cleanupCount;
 
     @Override
+    public RepositoryInspection inspect(RepositoryLocation location, String requestedRevision) {
+      return new RepositoryInspection(
+          location.value(),
+          location.value(),
+          new GitRevision("0123456789012345678901234567890123456789"),
+          "LOCAL_GIT",
+          true,
+          List.of("OTHER"),
+          List.of("SOURCE_BROWSING", "TEXT_RETRIEVAL"),
+          List.of("NOT_A_REQUIREMENT"));
+    }
+
+    @Override
+    public RepositoryInspection inspectDirectory(
+        String directoryName, List<DirectorySnapshotFile> files) {
+      return inspect(new RepositoryLocation("directory://snapshot/" + directoryName), "HEAD");
+    }
+
+    @Override
     public RegisteredRepository register(RepositoryLocation location, String requestedRevision) {
-      return new RegisteredRepository(
-          location.value(), new GitRevision("0123456789012345678901234567890123456789"));
+      var inspection = inspect(location, requestedRevision);
+      return new RegisteredRepository(inspection.repositoryPath(), inspection.revision());
     }
 
     @Override

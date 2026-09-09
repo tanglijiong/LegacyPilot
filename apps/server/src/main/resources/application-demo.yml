@@ -1,0 +1,9 @@
+server:
+  address: 127.0.0.1
+
+legacy-pilot:
+  security:
+    mode: demo
+  demo:
+    source: ${LEGACY_PILOT_DEMO_SOURCE:${user.dir}/.legacy-pilot-demo/banking-demo}
+    revision: ${LEGACY_PILOT_DEMO_REVISION:HEAD}

@@ -191,7 +191,10 @@ public final class MavenTool implements AgentTool {
         "Run configured Checkstyle and SpotBugs checks in the offline Docker sandbox.",
         sandbox,
         cache,
-        List.of("checkstyle:check", "spotbugs:check"),
+        List.of(
+            "-Dcheckstyle.config.location=google_checks.xml",
+            "org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:check",
+            "com.github.spotbugs:spotbugs-maven-plugin:4.10.4.0:check"),
         false,
         profiles,
         properties,

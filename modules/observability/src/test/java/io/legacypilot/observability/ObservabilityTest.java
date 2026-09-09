@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -83,6 +84,70 @@ class ObservabilityTest {
     assertTrue(Files.readString(directory.resolve("run-1.md")).contains("# LegacyPilot Run"));
     assertTrue(store.load("missing").isEmpty());
     assertThrows(IllegalArgumentException.class, () -> store.load("../escape"));
+  }
+
+  @Test
+  void rendersAndValidatesSourceGroundedTaskArtifacts() {
+    var values = new java.util.ArrayList<>(List.of("TransferService applies the limit"));
+    var sections = new LinkedHashMap<String, List<String>>();
+    sections.put("businessRules", values);
+    var evidence =
+        new SourceEvidence(
+            "src/TransferService.java",
+            "TransferService",
+            10,
+            12,
+            "if (`amount` > limit)",
+            "TransferService applies the limit",
+            "abc123");
+    var artifact =
+        new TaskArtifact(
+            TaskArtifact.CURRENT_SCHEMA_VERSION,
+            "ANALYZE",
+            "The limit is enforced in the service.",
+            sections,
+            List.of(evidence),
+            List.of("The database schema is outside this repository."));
+    values.add("mutation must not leak");
+    sections.put("risks", List.of("mutation must not leak"));
+    var report =
+        new RunReport(
+            "run-analysis",
+            "SUCCEEDED",
+            "source-grounded result verified",
+            3,
+            50,
+            BigDecimal.ZERO,
+            Duration.ofSeconds(1),
+            "LOW",
+            List.of("inspect the rule"),
+            List.of(Map.of("name", "claim-grounding", "status", "PASSED")),
+            List.of(),
+            "ANALYZE",
+            artifact,
+            Map.of("unsupportedClaimCount", "0"));
+
+    var markdown = new ReportRenderer(new ObjectMapper()).markdown(report);
+
+    assertTrue(markdown.contains("### businessRules"));
+    assertTrue(markdown.contains("Source evidence"));
+    assertTrue(markdown.contains("if ('amount' > limit)"));
+    assertTrue(evidence.excerptSha256().matches("[0-9a-f]{64}"));
+    assertTrue(markdown.contains("### Unknowns"));
+    assertEquals(
+        List.of("TransferService applies the limit"), artifact.sections().get("businessRules"));
+    assertThrows(UnsupportedOperationException.class, () -> artifact.sections().clear());
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new SourceEvidence("", "symbol", 1, 1, "source", "claim", "revision"));
+    assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            new SourceEvidence(
+                "source.java", "symbol", 1, 1, "source", "claim", "revision", "0".repeat(64)));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> new TaskArtifact(99, "ANALYZE", "summary", Map.of(), List.of(evidence), List.of()));
   }
 
   @Test

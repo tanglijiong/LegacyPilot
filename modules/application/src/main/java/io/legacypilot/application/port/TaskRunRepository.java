@@ -2,6 +2,7 @@ package io.legacypilot.application.port;
 
 import io.legacypilot.domain.run.RunId;
 import io.legacypilot.domain.run.TaskRun;
+import io.legacypilot.domain.task.TaskId;
 import java.util.Optional;
 
 public interface TaskRunRepository {
@@ -10,4 +11,6 @@ public interface TaskRunRepository {
   TaskRun update(TaskRun run);
 
   Optional<TaskRun> findById(RunId id);
+
+  Optional<TaskRun> findLatestByTaskId(TaskId taskId);
 }

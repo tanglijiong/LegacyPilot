@@ -22,7 +22,11 @@ public final class TaskRun {
               RunStatus.FAILED,
               RunStatus.CANCELLED),
           RunStatus.WORKSPACE_READY,
-          EnumSet.of(RunStatus.PLANNING, RunStatus.RECOVERING, RunStatus.CANCELLED),
+          EnumSet.of(
+              RunStatus.QUEUED, RunStatus.PLANNING, RunStatus.RECOVERING, RunStatus.CANCELLED),
+          RunStatus.QUEUED,
+          EnumSet.of(
+              RunStatus.PLANNING, RunStatus.RECOVERING, RunStatus.FAILED, RunStatus.CANCELLED),
           RunStatus.PLANNING,
           EnumSet.of(
               RunStatus.WAITING_FOR_APPROVAL,
@@ -176,6 +180,35 @@ public final class TaskRun {
     }
     return copy(
         recoveryTarget, workspaceId, null, null, now, append(recoveryTarget, now, "recovered"));
+  }
+
+  /** Starts an explicit, audited retry while retaining the existing workspace and history. */
+  public TaskRun beginRetry(RunStatus target, Instant now, String reason) {
+    Objects.requireNonNull(target, "target must not be null");
+    Objects.requireNonNull(now, "now must not be null");
+    if (!status.isTerminal() || status == RunStatus.SUCCEEDED) {
+      throw new InvalidStateTransitionException(status, RunStatus.RECOVERING);
+    }
+    if (target != RunStatus.EXECUTING && target != RunStatus.PLANNING) {
+      throw new IllegalArgumentException("retry target must be EXECUTING or PLANNING");
+    }
+    return copy(
+        RunStatus.RECOVERING,
+        workspaceId,
+        target,
+        null,
+        now,
+        append(RunStatus.RECOVERING, now, reason));
+  }
+
+  /** Advances the optimistic version when an approval decision is recorded. */
+  public TaskRun recordDecision(Instant now, String reason) {
+    Objects.requireNonNull(now, "now must not be null");
+    if (status != RunStatus.WAITING_FOR_APPROVAL && status != RunStatus.NEEDS_REVIEW) {
+      throw new InvalidStateTransitionException(status, status);
+    }
+    return copy(
+        status, workspaceId, recoveryTarget, terminalReason, now, append(status, now, reason));
   }
 
   public TaskRun withVersion(long newVersion) {

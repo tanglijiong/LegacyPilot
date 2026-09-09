@@ -13,6 +13,7 @@ import picocli.CommandLine.Command;
       ProjectShowCommand.class,
       TaskCreateCommand.class,
       TaskShowCommand.class,
+      TaskResultCommand.class,
       RunStartCommand.class,
       RunStatusCommand.class,
       RunCancelCommand.class,

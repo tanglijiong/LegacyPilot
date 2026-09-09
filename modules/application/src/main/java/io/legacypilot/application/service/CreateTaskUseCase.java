@@ -9,6 +9,7 @@ import io.legacypilot.domain.task.AcceptanceCriteria;
 import io.legacypilot.domain.task.Requirement;
 import io.legacypilot.domain.task.Task;
 import io.legacypilot.domain.task.TaskId;
+import io.legacypilot.domain.task.TaskMode;
 import java.time.Clock;
 import java.util.List;
 import java.util.Objects;
@@ -29,18 +30,52 @@ public final class CreateTaskUseCase {
   }
 
   public Task create(String projectIdValue, String requirement, List<String> criteria) {
+    return create(projectIdValue, TaskMode.CHANGE, requirement, criteria, null);
+  }
+
+  public Task create(
+      String projectIdValue, TaskMode mode, String requirement, List<String> criteria) {
+    return create(projectIdValue, mode, requirement, criteria, null);
+  }
+
+  public Task create(
+      String projectIdValue,
+      TaskMode mode,
+      String requirement,
+      List<String> criteria,
+      String conversationId) {
     var projectId = new ProjectId(projectIdValue);
     if (projects.findById(projectId).isEmpty()) {
       throw new ResourceNotFoundException("Project", projectIdValue);
     }
+    var taskId = new TaskId(ids.next("task"));
+    var resolvedConversationId = resolveConversation(projectId, taskId, conversationId);
     var task =
         new Task(
-            new TaskId(ids.next("task")),
+            taskId,
             projectId,
+            resolvedConversationId,
+            Objects.requireNonNull(mode, "task mode is required"),
             new Requirement(requirement),
             new AcceptanceCriteria(criteria == null ? List.of() : criteria),
             clock.instant());
     tasks.add(task);
     return task;
+  }
+
+  private String resolveConversation(
+      ProjectId projectId, TaskId taskId, String requestedConversationId) {
+    if (requestedConversationId == null || requestedConversationId.isBlank()) {
+      return taskId.value();
+    }
+    var root =
+        tasks
+            .findById(new TaskId(requestedConversationId))
+            .orElseThrow(
+                () -> new ResourceNotFoundException("Conversation", requestedConversationId));
+    if (!root.projectId().equals(projectId)) {
+      throw new IllegalArgumentException("conversation must belong to the same project");
+    }
+    return root.conversationId();
   }
 }

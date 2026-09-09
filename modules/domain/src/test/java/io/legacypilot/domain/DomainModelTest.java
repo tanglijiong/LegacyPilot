@@ -25,6 +25,7 @@ import io.legacypilot.domain.task.AcceptanceCriteria;
 import io.legacypilot.domain.task.Requirement;
 import io.legacypilot.domain.task.Task;
 import io.legacypilot.domain.task.TaskId;
+import io.legacypilot.domain.task.TaskMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -51,6 +52,9 @@ class DomainModelTest {
 
     assertEquals(REVISION.toLowerCase(java.util.Locale.ROOT), project.baseRevision().value());
     assertEquals("add a feature", task.requirement().text());
+    assertEquals(TaskMode.CHANGE, task.mode());
+    assertTrue(TaskMode.ANALYZE.readOnly());
+    assertTrue(TaskMode.EXPLAIN.readOnly());
     assertEquals(2, task.acceptanceCriteria().items().size());
     assertTrue(AcceptanceCriteria.none().items().isEmpty());
   }
@@ -111,6 +115,31 @@ class DomainModelTest {
     assertEquals(RunStatus.PREPARING_WORKSPACE, recovered.status());
     assertNull(recovered.recoveryTarget());
     assertThrows(IllegalStateException.class, () -> recovered.recover(NOW));
+  }
+
+  @Test
+  void reopensOnlyUnsuccessfulTerminalRunsForAnExplicitRetry() {
+    var failed =
+        TaskRun.create(new RunId("retry-run"), new TaskId("task"), NOW)
+            .transitionTo(RunStatus.PREPARING_WORKSPACE, NOW, "start")
+            .transitionTo(RunStatus.FAILED, NOW, "workspace failed");
+
+    var retrying = failed.beginRetry(RunStatus.PLANNING, NOW.plusSeconds(1), "replan");
+
+    assertEquals(RunStatus.RECOVERING, retrying.status());
+    assertEquals(RunStatus.PLANNING, retrying.recoveryTarget());
+    assertEquals(RunStatus.PLANNING, retrying.recover(NOW.plusSeconds(2)).status());
+    var succeeded =
+        TaskRun.create(new RunId("success-run"), new TaskId("task"), NOW)
+            .transitionTo(RunStatus.PREPARING_WORKSPACE, NOW, "start")
+            .workspaceReady(new WorkspaceId("success-run"), NOW)
+            .transitionTo(RunStatus.PLANNING, NOW, "plan")
+            .transitionTo(RunStatus.EXECUTING, NOW, "execute")
+            .transitionTo(RunStatus.VERIFYING, NOW, "verify")
+            .transitionTo(RunStatus.SUCCEEDED, NOW, "done");
+    assertThrows(
+        InvalidStateTransitionException.class,
+        () -> succeeded.beginRetry(RunStatus.EXECUTING, NOW, "invalid"));
   }
 
   @Test

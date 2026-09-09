@@ -17,8 +17,8 @@ public final class StructuredModelGateway implements ModelGateway {
       RawModelClient client, ObjectMapper mapper, int maximumCorrections) {
     this.client = Objects.requireNonNull(client);
     this.mapper = Objects.requireNonNull(mapper);
-    if (maximumCorrections < 0 || maximumCorrections > 3) {
-      throw new IllegalArgumentException("maximum corrections must be between zero and three");
+    if (maximumCorrections < 0 || maximumCorrections > 20) {
+      throw new IllegalArgumentException("maximum corrections must be between zero and twenty");
     }
     this.maximumCorrections = maximumCorrections;
   }
@@ -44,11 +44,17 @@ public final class StructuredModelGateway implements ModelGateway {
         if (correction == maximumCorrections) {
           throw new ModelException(
               ModelErrorType.INVALID_RESPONSE,
-              "Model response did not match the required schema",
+              "Model response did not match the required schema: " + validationSummary(exception),
               false,
               exception);
         }
-        current = current.withCorrection("return only valid JSON matching the supplied schema");
+        current =
+            request.withCorrection(
+                "Replace this invalid response with valid JSON and no prose:\n"
+                    + bounded(response.content())
+                    + "\nValidation error:\n"
+                    + bounded(exception.getOriginalMessage())
+                    + "\nReturn only the complete replacement JSON matching the supplied schema.");
       }
     }
     throw new IllegalStateException("unreachable model correction state");
@@ -60,6 +66,19 @@ public final class StructuredModelGateway implements ModelGateway {
       return stripped.substring(7, stripped.length() - 3).strip();
     }
     return stripped;
+  }
+
+  private static String bounded(String value) {
+    if (value == null) {
+      return "unknown validation error";
+    }
+    return value.length() <= 16_000 ? value : value.substring(0, 16_000);
+  }
+
+  private static String validationSummary(JsonProcessingException exception) {
+    return exception instanceof SchemaMismatchException
+        ? bounded(exception.getOriginalMessage())
+        : "invalid JSON syntax";
   }
 
   private static final class SchemaMismatchException extends JsonProcessingException {

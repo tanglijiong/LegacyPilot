@@ -18,7 +18,7 @@ import java.util.Set;
 
 public final class ReadFileTool implements AgentTool {
 
-  private static final int MAX_LINES = 2_000;
+  private static final int MAX_LINES = 30;
   private static final long MAX_FILE_BYTES = 8L * 1024 * 1024;
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final ToolDescriptor DESCRIPTOR =
@@ -29,7 +29,8 @@ public final class ReadFileTool implements AgentTool {
               """
               {"type":"object","required":["path"],"additionalProperties":false,
                "properties":{"path":{"type":"string","maxLength":4096},
-               "startLine":{"type":"integer"},"endLine":{"type":"integer"}}}
+               "startLine":{"type":"integer","minimum":1},
+               "endLine":{"type":"integer","minimum":1,"maximum":200000}}}
               """),
           JsonSchemas.parse("{" + "\"type\":\"object\"}"),
           RiskLevel.READ_ONLY,
@@ -75,7 +76,11 @@ public final class ReadFileTool implements AgentTool {
       output.put("startLine", start);
       output.put("endLine", to);
       output.put("content", String.join("\n", lines.subList(from, to)));
-      output.put("truncated", requestedEnd > end || to < lines.size());
+      var truncated = requestedEnd > end || (!input.has("endLine") && to < lines.size());
+      output.put("truncated", truncated);
+      if (truncated && to < lines.size()) {
+        output.put("nextStartLine", to + 1);
+      }
       return output;
     } catch (IOException exception) {
       throw new ToolFailureException(

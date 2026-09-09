@@ -12,6 +12,8 @@ import io.legacypilot.application.error.ResourceNotFoundException;
 import io.legacypilot.model.ModelUsage;
 import io.legacypilot.observability.ReportStore;
 import io.legacypilot.observability.RunReport;
+import io.legacypilot.observability.SourceEvidence;
+import io.legacypilot.observability.TaskArtifact;
 import io.legacypilot.runtime.AgentCheckpoint;
 import io.legacypilot.runtime.AgentRunRequest;
 import io.legacypilot.runtime.AgentRuntime;
@@ -27,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -74,6 +77,7 @@ class AgentRuntimeControllerTest {
     assertEquals(checkpoint, controller.approve("run-1", approval, approver));
     assertEquals(result, controller.resume("run-1"));
     assertEquals(report, controller.report("run-1"));
+    assertEquals(report.artifact(), controller.artifact("run-1"));
     assertEquals(List.of(), controller.recover());
     verify(approvals).save(any(RuntimeApproval.class));
     var savedApproval = ArgumentCaptor.forClass(RuntimeApproval.class);
@@ -96,6 +100,7 @@ class AgentRuntimeControllerTest {
             mock(RunSecurityContextStore.class));
     assertThrows(ResourceNotFoundException.class, () -> controller.checkpoint("missing"));
     assertThrows(ResourceNotFoundException.class, () -> controller.report("missing"));
+    assertThrows(ResourceNotFoundException.class, () -> controller.artifact("missing"));
   }
 
   private static AgentCheckpoint checkpoint() {
@@ -115,6 +120,22 @@ class AgentRuntimeControllerTest {
   }
 
   private static RunReport report() {
+    var artifact =
+        new TaskArtifact(
+            TaskArtifact.CURRENT_SCHEMA_VERSION,
+            "ANALYZE",
+            "grounded result",
+            Map.of("entryPoints", List.of("TransferService is the entry point")),
+            List.of(
+                new SourceEvidence(
+                    "src/TransferService.java",
+                    "TransferService",
+                    1,
+                    2,
+                    "class TransferService",
+                    "TransferService is the entry point",
+                    "abc123")),
+            List.of());
     return new RunReport(
         "run-1",
         "WAITING_FOR_APPROVAL",
@@ -126,6 +147,9 @@ class AgentRuntimeControllerTest {
         "UNKNOWN",
         List.of(),
         List.of(),
-        List.of());
+        List.of(),
+        "ANALYZE",
+        artifact,
+        Map.of("unsupportedClaimCount", "0"));
   }
 }

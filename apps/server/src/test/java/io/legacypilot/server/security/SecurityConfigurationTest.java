@@ -1,6 +1,7 @@
 package io.legacypilot.server.security;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -44,6 +45,14 @@ class SecurityConfigurationTest {
         .andExpect(status().isForbidden());
     mvc.perform(get("/api/v1/projects/missing").with(user("auditor-a").roles("AUDITOR")))
         .andExpect(status().isNotFound());
+    mvc.perform(delete("/api/v1/projects/missing").with(user("auditor-a").roles("AUDITOR")))
+        .andExpect(status().isForbidden());
+    mvc.perform(
+            get("/api/v1/projects/missing/source")
+                .param("revision", "a".repeat(40))
+                .param("path", "source.java")
+                .with(user("approver-a").roles("APPROVER")))
+        .andExpect(status().isForbidden());
     mvc.perform(
             post("/api/v1/capabilities")
                 .with(user("developer-a").roles("DEVELOPER"))
@@ -62,6 +71,15 @@ class SecurityConfigurationTest {
         .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/execute']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/approvals']").exists())
         .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/resume']").exists())
-        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/report']").exists());
+        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/report']").exists())
+        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/artifact']").exists())
+        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/events']").exists());
+    mvc.perform(get("/v3/api-docs").with(user("admin-a").roles("ADMIN")))
+        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/change-review']").exists())
+        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/recovery']").exists())
+        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/retry']").exists())
+        .andExpect(jsonPath("$.paths['/api/v1/runs/{runId}/replan']").exists());
+    mvc.perform(get("/v3/api-docs").with(user("admin-a").roles("ADMIN")))
+        .andExpect(jsonPath("$.paths['/api/v1/projects/{projectId}/source']").exists());
   }
 }

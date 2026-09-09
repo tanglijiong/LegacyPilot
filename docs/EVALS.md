@@ -20,7 +20,7 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar eval-model-run \
   --run-id deepseek-local-smoke \
   --model-adapter local-http \
   --model-base-url http://127.0.0.1:12434/engines/v1 \
-  --model hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M \
+  --model hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m \
   --reasoning-effort high \
   --prompt-file evals/prompts/baseline-prompt-v2.md \
   --prompt-version baseline-prompt-v2 \

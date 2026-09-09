@@ -8,9 +8,11 @@
 
 ```bash
 docker model pull \
-  hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M
+  hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m
+docker model configure --context-size=8192 \
+  hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m
 docker model run \
-  hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M \
+  hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m \
   '只回复 OK'
 ```
 
@@ -18,10 +20,11 @@ LegacyPilot Server/CLI 连接本机 OpenAI-compatible API 时设置：
 
 ```bash
 export LEGACY_PILOT_MODEL_BASE_URL=http://127.0.0.1:12434/engines/v1
-export LEGACY_PILOT_MODEL=hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M
+export LEGACY_PILOT_MODEL=hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m
 ```
 
 程序只接受显式 loopback HTTP 地址，不接受公网主机、HTTPS 代理、URL 凭据或重定向。无需 API key。
+`8192` 上下文配置用于容纳固定 revision 的源码上下文、结构化 Schema 和纠错反馈；使用 Docker Model Runner 默认的小上下文可能得到 HTTP 400。
 
 真实 5 题 smoke 可使用 `eval-model-run --model-adapter local-http`，完整命令见 [`docs/EVALS.md`](../../docs/EVALS.md)。
 

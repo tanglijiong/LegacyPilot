@@ -131,7 +131,7 @@ class PostgresLifecycleApiTest {
             .query(Integer.class)
             .single();
 
-    org.junit.jupiter.api.Assertions.assertEquals(2, appliedMigrations);
+    org.junit.jupiter.api.Assertions.assertEquals(6, appliedMigrations);
     org.junit.jupiter.api.Assertions.assertEquals(1, securityContexts);
   }
 

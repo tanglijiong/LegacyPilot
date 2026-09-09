@@ -10,9 +10,14 @@ public enum RuntimeStatus {
   SUCCEEDED,
   FAILED,
   DENIED,
+  CANCELLED,
   BUDGET_EXHAUSTED;
 
   public boolean terminal() {
-    return this == SUCCEEDED || this == FAILED || this == DENIED || this == BUDGET_EXHAUSTED;
+    return this == SUCCEEDED
+        || this == FAILED
+        || this == DENIED
+        || this == CANCELLED
+        || this == BUDGET_EXHAUSTED;
   }
 }

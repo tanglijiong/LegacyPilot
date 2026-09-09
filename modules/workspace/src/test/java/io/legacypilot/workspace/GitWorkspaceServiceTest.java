@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.legacypilot.application.port.DirectorySnapshotFile;
 import io.legacypilot.domain.project.Project;
 import io.legacypilot.domain.project.ProjectId;
 import io.legacypilot.domain.project.RepositoryLocation;
@@ -71,12 +72,60 @@ class GitWorkspaceServiceTest {
   }
 
   @Test
-  void rejectsDirtyUnsupportedOrMissingLocalRepositories() throws IOException {
+  void inspectsDirtyRepositoryWithoutRequiringJavaOrCompilation() throws IOException {
     var dirty = createRepository(temporaryDirectory.resolve("dirty"));
     Files.writeString(dirty.resolve("tracked.txt"), "changed");
-    assertThrows(
-        WorkspaceException.class,
-        () -> service().register(new RepositoryLocation(dirty.toString()), null));
+    var inspection = service().inspect(new RepositoryLocation(dirty.toString()), null);
+    assertFalse(inspection.clean());
+    assertFalse(inspection.capabilities().contains("MAVEN_VERIFICATION"));
+    assertTrue(inspection.capabilities().contains("SOURCE_BROWSING"));
+    assertTrue(inspection.warnings().contains("UNCOMMITTED_CHANGES_EXCLUDED"));
+    assertTrue(inspection.warnings().contains("JAVA_SEMANTIC_ANALYSIS_UNAVAILABLE"));
+    assertEquals(
+        inspection.revision(),
+        service().register(new RepositoryLocation(dirty.toString()), null).revision());
+  }
+
+  @Test
+  void snapshotsPlainLocalDirectoryWithoutModifyingOrRequiringGit() throws IOException {
+    var source = temporaryDirectory.resolve("plain-project");
+    Files.createDirectories(source.resolve("src"));
+    Files.writeString(source.resolve("src/app.py"), "print('legacy')\n");
+    var service = service();
+
+    var inspection = service.inspect(new RepositoryLocation(source.toString()), "HEAD");
+
+    assertEquals("LOCAL_DIRECTORY", inspection.sourceKind());
+    assertEquals(List.of("PYTHON"), inspection.technologies());
+    assertTrue(inspection.source().startsWith("directory://"));
+    assertTrue(inspection.warnings().contains("DIRECTORY_SNAPSHOT_CREATED"));
+    assertFalse(Files.exists(source.resolve(".git")));
+
+    var registered =
+        service.register(
+            new RepositoryLocation(inspection.source()), inspection.revision().value());
+    var project =
+        new Project(
+            new ProjectId("project-directory"),
+            new RepositoryLocation(inspection.source()),
+            registered.repositoryPath(),
+            registered.revision(),
+            Instant.EPOCH);
+    var workspace = service.create(project, new RunId("run-directory"));
+    assertEquals(
+        "print('legacy')\n", Files.readString(Path.of(workspace.path()).resolve("src/app.py")));
+    service.cleanup(project, new RunId("run-directory"), workspace.id());
+
+    var uploaded =
+        service.inspectDirectory(
+            "selected-folder",
+            List.of(new DirectorySnapshotFile("README.txt", "offline\n".getBytes())));
+    assertEquals("LOCAL_DIRECTORY", uploaded.sourceKind());
+    assertEquals("offline", git(Path.of(uploaded.repositoryPath()), "show", "HEAD:README.txt"));
+  }
+
+  @Test
+  void rejectsUnsupportedOrMissingLocalRepositories() throws IOException {
 
     var submodules = createRepository(temporaryDirectory.resolve("submodules"));
     Files.writeString(submodules.resolve(".gitmodules"), "[submodule \"x\"]\n");

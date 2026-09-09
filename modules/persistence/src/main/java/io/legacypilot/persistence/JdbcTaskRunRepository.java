@@ -105,6 +105,37 @@ public class JdbcTaskRunRepository implements TaskRunRepository {
         .optional();
   }
 
+  @Override
+  public Optional<TaskRun> findLatestByTaskId(TaskId taskId) {
+    return jdbc.sql(
+            """
+            SELECT id, task_id, status, version, workspace_id, recovery_target,
+                   terminal_reason, created_at, updated_at
+            FROM task_runs
+            WHERE task_id = :taskId
+            ORDER BY created_at DESC, id ASC
+            LIMIT 1
+            """)
+        .param("taskId", taskId.value())
+        .query(
+            (resultSet, rowNumber) -> restoreRun(resultSet, new RunId(resultSet.getString("id"))))
+        .optional();
+  }
+
+  private TaskRun restoreRun(java.sql.ResultSet resultSet, RunId id) throws java.sql.SQLException {
+    return TaskRun.restore(
+        id,
+        new TaskId(resultSet.getString("task_id")),
+        RunStatus.valueOf(resultSet.getString("status")),
+        resultSet.getLong("version"),
+        workspaceId(resultSet.getString("workspace_id")),
+        status(resultSet.getString("recovery_target")),
+        resultSet.getString("terminal_reason"),
+        resultSet.getTimestamp("created_at").toInstant(),
+        resultSet.getTimestamp("updated_at").toInstant(),
+        findHistory(id));
+  }
+
   private void replaceHistory(TaskRun run) {
     jdbc.sql("DELETE FROM run_transitions WHERE run_id = :runId")
         .param("runId", run.id().value())

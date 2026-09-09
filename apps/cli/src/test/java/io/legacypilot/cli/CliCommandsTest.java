@@ -26,6 +26,7 @@ import io.legacypilot.domain.task.AcceptanceCriteria;
 import io.legacypilot.domain.task.Requirement;
 import io.legacypilot.domain.task.Task;
 import io.legacypilot.domain.task.TaskId;
+import io.legacypilot.domain.task.TaskMode;
 import io.legacypilot.eval.EvalAttemptCheckpoint;
 import io.legacypilot.eval.EvalExperimentBudget;
 import io.legacypilot.eval.EvalExperimentCheckpoint;
@@ -35,6 +36,8 @@ import io.legacypilot.eval.EvalPricingSnapshot;
 import io.legacypilot.eval.EvalTaskResult;
 import io.legacypilot.model.ModelUsage;
 import io.legacypilot.observability.InMemoryTraceSink;
+import io.legacypilot.observability.ReportStore;
+import io.legacypilot.observability.RunReport;
 import io.legacypilot.observability.SensitiveDataRedactor;
 import io.legacypilot.runtime.AgentCheckpoint;
 import io.legacypilot.runtime.AgentRuntime;
@@ -59,6 +62,7 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import picocli.CommandLine;
@@ -79,7 +83,8 @@ class CliCommandsTest {
     var getTask = mock(GetTaskUseCase.class);
     when(register.register("/repo", "HEAD")).thenReturn(project);
     when(getProject.get("project-1")).thenReturn(project);
-    when(createTask.create("project-1", "work", List.of("tests"))).thenReturn(task);
+    when(createTask.create("project-1", TaskMode.ANALYZE, "work", List.of("tests")))
+        .thenReturn(task);
     when(getTask.get("task-1")).thenReturn(task);
 
     var text =
@@ -98,6 +103,8 @@ class CliCommandsTest {
                       .execute(
                           "--project",
                           "project-1",
+                          "--mode",
+                          "ANALYZE",
                           "--requirement",
                           "work",
                           "--criterion",
@@ -107,6 +114,7 @@ class CliCommandsTest {
             });
     assertTrue(text.contains("\"id\":{\"value\":\"project-1\"}"));
     assertTrue(text.contains("\"requirement\":{\"text\":\"work\"}"));
+    verify(createTask).create("project-1", TaskMode.ANALYZE, "work", List.of("tests"));
   }
 
   @Test
@@ -131,6 +139,43 @@ class CliCommandsTest {
                   0, new CommandLine(new RunCancelCommand(cancel, output)).execute("run-1"));
             });
     assertTrue(text.contains("\"status\":\"CREATED\""));
+  }
+
+  @Test
+  void rendersTaskResultAsJsonAndMarkdown() {
+    var reports = mock(ReportStore.class);
+    var report =
+        new RunReport(
+            "run-1",
+            "SUCCEEDED",
+            "source-grounded result verified",
+            2,
+            42,
+            BigDecimal.ZERO,
+            Duration.ofSeconds(1),
+            "LOW",
+            List.of("inspect transfer flow"),
+            List.of(),
+            List.of());
+    when(reports.load("run-1")).thenReturn(Optional.of(report));
+    var mapper = new ObjectMapper().findAndRegisterModules();
+
+    var text =
+        capture(
+            () -> {
+              assertEquals(
+                  0,
+                  new CommandLine(new TaskResultCommand(reports, new JsonOutput(mapper), mapper))
+                      .execute("run-1"));
+              assertEquals(
+                  0,
+                  new CommandLine(new TaskResultCommand(reports, new JsonOutput(mapper), mapper))
+                      .execute("run-1", "--format", "MARKDOWN"));
+            });
+
+    assertTrue(text.contains("\"runId\":\"run-1\""));
+    assertTrue(text.contains("# LegacyPilot Run run-1"));
+    assertTrue(text.contains("Task mode: **CHANGE**"));
   }
 
   @Test

@@ -11,11 +11,14 @@ public record AgentAction(String type, String tool, JsonNode input, String reaso
     input =
         input == null ? com.fasterxml.jackson.databind.node.NullNode.instance : input.deepCopy();
     reason = Objects.requireNonNullElse(reason, "");
-    if (!java.util.Set.of("TOOL", "VERIFY", "FINISH").contains(type)) {
+    if (!java.util.Set.of("TOOL", "SUBMIT_RESULT", "VERIFY", "FINISH").contains(type)) {
       throw new IllegalArgumentException("agent action type is invalid");
     }
     if (type.equals("TOOL") && tool.isBlank()) {
       throw new IllegalArgumentException("tool action requires a tool name");
+    }
+    if (type.equals("SUBMIT_RESULT") && !input.isObject()) {
+      throw new IllegalArgumentException("submitted result must be an object");
     }
   }
 

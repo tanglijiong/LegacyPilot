@@ -4,6 +4,7 @@ import io.legacypilot.analysis.java.DependencyGraph;
 import io.legacypilot.analysis.java.GraphDirection;
 import io.legacypilot.analysis.java.ProjectIndex;
 import io.legacypilot.analysis.java.SourceSymbol;
+import io.legacypilot.analysis.java.SymbolKind;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -31,7 +32,11 @@ public final class ContextBuilder {
   public ContextBuildResult build(ProjectIndex index, ContextRequest request) {
     Objects.requireNonNull(index, "index must not be null");
     Objects.requireNonNull(request, "request must not be null");
-    var direct = retriever.retrieve(index, request.query(), request.maximumCandidates());
+    var retrieved = retriever.retrieve(index, request.query(), request.maximumCandidates());
+    var direct =
+        retrieved.isEmpty()
+            ? fallback(index, Math.min(request.maximumCandidates(), 20))
+            : retrieved;
     var expanded = expand(index, direct, request.graphDepth(), request.maximumCandidates() * 3);
     var ordered =
         expanded.values().stream()
@@ -42,6 +47,38 @@ public final class ContextBuilder {
                     .thenComparing(EvidenceCandidate::symbolId))
             .toList();
     return pack(index, ordered, request.tokenBudget());
+  }
+
+  private static List<EvidenceCandidate> fallback(ProjectIndex index, int limit) {
+    var typeKinds =
+        java.util.Set.of(
+            SymbolKind.CLASS,
+            SymbolKind.INTERFACE,
+            SymbolKind.ENUM,
+            SymbolKind.RECORD,
+            SymbolKind.ANNOTATION);
+    return index.symbols().stream()
+        .filter(
+            symbol ->
+                (typeKinds.contains(symbol.kind())
+                        || symbol.kind() == SymbolKind.METHOD
+                        || symbol.kind() == SymbolKind.CONSTRUCTOR)
+                    && !symbol.sourceText().isBlank())
+        .sorted(
+            Comparator.comparing(SourceSymbol::testSource)
+                .thenComparing(symbol -> symbol.springRoles().isEmpty())
+                .thenComparing(symbol -> typeKinds.contains(symbol.kind()) ? 0 : 1)
+                .thenComparing(SourceSymbol::path)
+                .thenComparingInt(symbol -> symbol.range().start().line()))
+        .limit(limit)
+        .map(
+            symbol ->
+                CandidateSupport.candidate(
+                    symbol,
+                    0.01,
+                    RetrievalSource.FALLBACK,
+                    "deterministic source fallback because the query had no lexical match"))
+        .toList();
   }
 
   private static Map<String, ExpandedCandidate> expand(
@@ -129,6 +166,8 @@ public final class ContextBuilder {
         + symbol.path()
         + ":"
         + symbol.range().start().line()
+        + "-"
+        + symbol.range().end().line()
         + " "
         + symbol.qualifiedName()
         + "\n"

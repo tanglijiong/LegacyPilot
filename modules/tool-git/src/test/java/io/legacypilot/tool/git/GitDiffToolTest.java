@@ -28,12 +28,21 @@ class GitDiffToolTest {
     Files.writeString(file, "before\n");
     git("add", "example.txt");
     git("commit", "-m", "initial");
-    Files.writeString(file, "after\n");
+    Files.writeString(workspace.resolve(".legacypilot-workspace"), "run\n");
     var context = new ToolContext("run", workspace, Set.of(), false);
     var tool = new GitDiffTool();
+    assertTrue(tool.execute(context, MAPPER.createObjectNode()).path("status").asText().isBlank());
+
+    Files.writeString(file, "after\n");
     var output = tool.execute(context, MAPPER.createObjectNode());
     assertTrue(output.path("diff").asText().contains("+after"));
     assertTrue(output.path("numstat").asText().contains("example.txt"));
+    assertTrue(output.path("status").asText().contains("example.txt"));
+
+    Files.writeString(workspace.resolve("untracked.txt"), "new\n");
+    var untrackedOutput = tool.execute(context, MAPPER.createObjectNode());
+    assertTrue(untrackedOutput.path("status").asText().contains("untracked.txt"));
+    assertTrue(untrackedOutput.path("numstat").asText().contains("1\t0\tuntracked.txt"));
 
     Files.writeString(file, "changed-line-that-is-long\n".repeat(60_000));
     assertTrue(tool.execute(context, MAPPER.createObjectNode()).path("truncated").asBoolean());

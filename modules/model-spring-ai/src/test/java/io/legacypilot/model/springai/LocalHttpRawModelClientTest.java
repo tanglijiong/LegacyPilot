@@ -103,7 +103,7 @@ class LocalHttpRawModelClientTest {
         "system",
         "user",
         mapper.readTree("{\"type\":\"object\"}"),
-        "hf.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF:Q4_K_M",
+        "hf.co/bartowski/deepseek-coder-v2-lite-instruct-gguf:q4_k_m",
         0,
         timeout,
         Map.of());

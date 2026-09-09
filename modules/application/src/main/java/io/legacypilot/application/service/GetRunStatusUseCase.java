@@ -4,7 +4,9 @@ import io.legacypilot.application.error.ResourceNotFoundException;
 import io.legacypilot.application.port.TaskRunRepository;
 import io.legacypilot.domain.run.RunId;
 import io.legacypilot.domain.run.TaskRun;
+import io.legacypilot.domain.task.TaskId;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class GetRunStatusUseCase {
 
@@ -17,5 +19,9 @@ public final class GetRunStatusUseCase {
   public TaskRun get(String runId) {
     return runs.findById(new RunId(runId))
         .orElseThrow(() -> new ResourceNotFoundException("TaskRun", runId));
+  }
+
+  public Optional<TaskRun> latestForTask(String taskId) {
+    return runs.findLatestByTaskId(new TaskId(taskId));
   }
 }

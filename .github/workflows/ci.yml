@@ -25,13 +25,23 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
       - name: Verify offline DeepSeek agent package
         env:
           PYTHONDONTWRITEBYTECODE: "1"
         run: python3 -m unittest discover -s deploy/deepseek -p 'test_*.py' -v
 
-      - name: Verify
-        run: ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Install browser system dependencies
+        run: npx --yes playwright@1.55.0 install-deps chromium
+
+      - name: Verify candidate release gate
+        run: ./deploy/candidate/verify.sh
 
       - name: Upload coverage reports
         if: always()
@@ -40,3 +50,12 @@ jobs:
           name: jacoco-reports
           path: "**/target/site/jacoco/"
           if-no-files-found: ignore
+
+      - name: Upload browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-diagnostics
+          path: apps/web/output/playwright/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -32,7 +32,9 @@ public final class ApplyPatchTool implements AgentTool {
                "additionalProperties":false,"properties":{
                "path":{"type":"string","maxLength":4096},
                "expectedSha256":{"type":"string","pattern":"[0-9a-f]{64}"},
-               "replacement":{"type":"string","maxLength":1048576}}}
+               "replacement":{"type":"string","maxLength":1048576},
+               "startLine":{"type":"integer","minimum":1},
+               "endLine":{"type":"integer","minimum":1,"maximum":200000}}}
               """),
           JsonSchemas.parse("{\"type\":\"object\"}"),
           RiskLevel.WORKSPACE_WRITE,
@@ -70,7 +72,21 @@ public final class ApplyPatchTool implements AgentTool {
         throw new ToolFailureException(
             ToolErrorCode.PATCH_CONFLICT, "Patch context no longer matches the workspace file");
       }
-      var replacement = input.path("replacement").asText();
+      var ranged = input.has("startLine") || input.has("endLine");
+      if (ranged && (!input.has("startLine") || !input.has("endLine"))) {
+        throw new ToolFailureException(
+            ToolErrorCode.INVALID_INPUT_SCHEMA,
+            "startLine and endLine must be provided together for a range patch");
+      }
+      var suppliedReplacement = input.path("replacement").asText();
+      var replacement =
+          ranged
+              ? PatchSupport.replaceLines(
+                  current,
+                  input.path("startLine").asInt(),
+                  input.path("endLine").asInt(),
+                  suppliedReplacement)
+              : suppliedReplacement;
       var parent = java.util.Objects.requireNonNull(path.getParent(), "patch parent");
       var temporary = Files.createTempFile(parent, ".legacypilot-patch-", ".tmp");
       try {

@@ -107,12 +107,20 @@ public final class LocalHttpRawModelClient implements RawModelClient {
             request.model(),
             "temperature",
             request.temperature(),
+            "max_tokens",
+            actionOutput(request) ? 1200 : 1800,
             "stream",
             false,
+            "response_format",
+            Map.of("type", "json_object"),
             "messages",
             List.of(
                 Map.of("role", "system", "content", system),
                 Map.of("role", "user", "content", request.userPrompt()))));
+  }
+
+  private static boolean actionOutput(ModelRequest request) {
+    return request.outputSchema().has("oneOf");
   }
 
   private static String validatedBaseUrl(String value) {

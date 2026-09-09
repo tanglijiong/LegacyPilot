@@ -66,6 +66,7 @@ class UnixSocketRawModelClientTest {
         assertEquals("deepseek", result.usage().model());
         assertTrue(received.get().contains("POST /v1/chat/completions"));
         assertTrue(received.get().contains("\"model\":\"deepseek\""));
+        assertTrue(received.get().contains("\"response_format\":{\"type\":\"json_object\"}"));
       }
     }
   }

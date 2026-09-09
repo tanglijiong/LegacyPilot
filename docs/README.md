@@ -20,6 +20,7 @@
 | [恢复机制运维指南](RESILIENT_HARNESS.md) | 版本化状态、Journal、Lease、Trace、Memory 与故障恢复 |
 | [受治理 Harness 指南](GOVERNED_HARNESS.md) | Policy、Capability、MCP 写工具、模型路由、Vector/Reranker 和 Docker 依赖治理 |
 | [下一阶段长期任务：v0.2 收口与精简 v0.3](NEXT_LONG_RUNNING_TASK_V0_2_V0_3.md) | 20–30 任务、可恢复模型实验、对比指标、失败分类和静态 Dashboard |
+| [下一阶段长期任务：面试级 Web 产品化](NEXT_LONG_RUNNING_TASK_WEB_PRODUCTIZATION.md) | 一键演示、异步执行、实时进度、源码证据、审批恢复和端到端验收 |
 | [银行内网 PoC 交付计划与状态台账](BANK_POC_DELIVERY_PLAN.md) | 银行内网可交付范围、阶段状态、交付物和最终验收条件 |
 | [银行内网 PoC API 契约与操作示例](BANK_POC_API.md) | 管理员 OpenAPI、统一执行流程、错误码和关联 ID 契约 |
 | [银行 PoC 安全架构与威胁模型](BANK_POC_SECURITY.md) | 信任边界、数据流、RBAC、端口、威胁控制和残余风险 |
@@ -27,10 +28,14 @@
 | [银行 PoC 验收手册](BANK_POC_ACCEPTANCE.md) | 自动化、安全、功能、模型、运维和发布证据项 |
 | [银行 PoC 发布检查表](BANK_POC_RELEASE_CHECKLIST.md) | 已通过证据、技术环境阻塞项与解阻输入 |
 | [Quickstart](QUICKSTART.md) | 在新环境构建、运行 Eval、启动 MCP 和排查常见故障 |
+| [ANALYZE 与 EXPLAIN](READ_ONLY_TASK_MODES.md) | 创建只读分析/讲解任务、查看带源码证据的结构化结果 |
+| [Web 工作台原型](WEB_PROTOTYPE_PLAN.md) | 第一阶段范围、验收路径和本地运行方式 |
 | [MCP Server](MCP_SERVER.md) | STDIO 配置、工具清单和安全边界 |
 | [Eval Harness](EVALS.md) | 五任务数据集、指标和基线解释 |
 | [Eval Dataset v2 与 Fixture 治理](EVAL_DATASET_V2.md) | v0.3 manifest、fixture provenance、哈希和文件范围约束 |
 | [公开演示证据](PUBLIC_DEMO.md) | 无 reference overlay 的真实模型演示、完整性检查与媒体文件 |
+| [面试演示、架构图与答辩](INTERVIEW_DEMO.md) | 8–10 分钟与 3 分钟脚本、故障恢复、架构叙事和答辩材料 |
+| [v0.3.0-rc.1 候选发布说明](RELEASE_CANDIDATE_V0.3.md) | 固定 revision、质量门槛、已知限制和候选发布判定 |
 | [v0.2 迁移说明](MIGRATION_V0.2.md) | 从 v0.1 状态、授权、模型、检索与 Docker 契约迁移到 v0.2 |
 | [v0.2 发布清单](RELEASE_CHECKLIST_V0.2.md) | v0.2 工程、验证与发布证据 |
 | [依赖升级审阅](DEPENDENCY_REVIEW_2026-08-29.md) | v0.2 发布时九个 Dependabot 大版本 PR 的处置 |

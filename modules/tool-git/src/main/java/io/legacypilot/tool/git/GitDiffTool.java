@@ -11,7 +11,10 @@ import io.legacypilot.tool.spi.ToolDescriptor;
 import io.legacypilot.tool.spi.ToolErrorCode;
 import io.legacypilot.tool.spi.ToolFailureException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
@@ -45,11 +48,79 @@ public final class GitDiffTool implements AgentTool {
     var diff = run(context, List.of("diff", "--no-ext-diff", "--no-color", "HEAD", "--"));
     var stat =
         run(context, List.of("diff", "--no-ext-diff", "--no-color", "--numstat", "HEAD", "--"));
+    var status =
+        run(
+            context,
+            List.of(
+                "status",
+                "--porcelain=v1",
+                "--untracked-files=all",
+                "--",
+                ".",
+                ":(exclude).legacypilot-workspace"));
+    var untracked =
+        run(
+            context,
+            List.of(
+                "ls-files",
+                "--others",
+                "--exclude-standard",
+                "-z",
+                "--",
+                ".",
+                ":(exclude).legacypilot-workspace"));
+    var untrackedStat = untrackedNumstat(context.workspaceRoot(), untracked.text());
     var output = MAPPER.createObjectNode();
     output.put("diff", diff.text());
-    output.put("numstat", stat.text());
-    output.put("truncated", diff.truncated() || stat.truncated());
+    output.put("numstat", stat.text() + untrackedStat.text());
+    output.put("status", status.text());
+    output.put(
+        "truncated",
+        diff.truncated()
+            || stat.truncated()
+            || status.truncated()
+            || untracked.truncated()
+            || untrackedStat.truncated());
     return output;
+  }
+
+  private static UntrackedStat untrackedNumstat(Path workspace, String paths) {
+    var text = new StringBuilder();
+    var truncated = false;
+    for (var relative : paths.split("\\u0000")) {
+      if (relative.isBlank()) {
+        continue;
+      }
+      var file = workspace.resolve(relative).normalize();
+      if (!file.startsWith(workspace.normalize()) || !Files.isRegularFile(file)) {
+        continue;
+      }
+      try {
+        if (Files.size(file) > MAX_OUTPUT) {
+          truncated = true;
+          continue;
+        }
+        text.append(countLines(file)).append("\t0\t").append(relative).append('\n');
+      } catch (IOException exception) {
+        truncated = true;
+      }
+    }
+    return new UntrackedStat(text.toString(), truncated);
+  }
+
+  private static long countLines(Path file) throws IOException {
+    long lines = 0;
+    int last = -1;
+    try (InputStream stream = Files.newInputStream(file)) {
+      int value;
+      while ((value = stream.read()) >= 0) {
+        last = value;
+        if (value == '\n') {
+          lines++;
+        }
+      }
+    }
+    return last >= 0 && last != '\n' ? lines + 1 : lines;
   }
 
   private Output run(ToolContext context, List<String> arguments) {
@@ -106,4 +177,6 @@ public final class GitDiffTool implements AgentTool {
   }
 
   private record Output(String text, boolean truncated) {}
+
+  private record UntrackedStat(String text, boolean truncated) {}
 }

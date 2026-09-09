@@ -3,6 +3,7 @@ package io.legacypilot.server.api;
 import io.legacypilot.application.error.ResourceNotFoundException;
 import io.legacypilot.observability.ReportStore;
 import io.legacypilot.observability.RunReport;
+import io.legacypilot.observability.TaskArtifact;
 import io.legacypilot.runtime.AgentCheckpoint;
 import io.legacypilot.runtime.AgentRunRequest;
 import io.legacypilot.runtime.AgentRuntime;
@@ -98,6 +99,15 @@ public class AgentRuntimeController {
     return reports
         .load(runId)
         .orElseThrow(() -> new ResourceNotFoundException("agent run report", runId));
+  }
+
+  @GetMapping("/{runId}/artifact")
+  TaskArtifact artifact(@PathVariable String runId) {
+    var artifact = report(runId).artifact();
+    if (artifact == null) {
+      throw new ResourceNotFoundException("agent run artifact", runId);
+    }
+    return artifact;
   }
 
   public record SubmitApprovalRequest(

@@ -15,6 +15,11 @@ public final class JsonSchemaValidator {
   }
 
   private void validateAt(JsonNode schema, JsonNode value, String path, List<String> errors) {
+    var alternatives = schema.path("oneOf");
+    if (alternatives.isArray()) {
+      validateOneOf(alternatives, value, path, errors);
+      return;
+    }
     var type = schema.path("type").asText();
     if (!type.isEmpty() && !matches(type, value)) {
       errors.add(path + " must be " + type);
@@ -28,6 +33,21 @@ public final class JsonSchemaValidator {
       validateString(schema, value, path, errors);
     } else if (!type.isEmpty() && !Set.of("integer", "number", "boolean", "null").contains(type)) {
       errors.add(path + " uses unsupported schema type " + type);
+    }
+  }
+
+  private void validateOneOf(
+      JsonNode alternatives, JsonNode value, String path, List<String> errors) {
+    var matches = 0;
+    for (var alternative : alternatives) {
+      var alternativeErrors = new ArrayList<String>();
+      validateAt(alternative, value, path, alternativeErrors);
+      if (alternativeErrors.isEmpty()) {
+        matches++;
+      }
+    }
+    if (matches != 1) {
+      errors.add(path + " must match exactly one allowed schema");
     }
   }
 

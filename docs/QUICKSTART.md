@@ -49,7 +49,25 @@ java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar agent-recover
 
 默认持久状态位于 `.legacy-pilot/agent`。`agent-recover` 只恢复安全的非终态任务，不会越过 `WAITING_FOR_APPROVAL` 或 `NEEDS_REVIEW`。迁移、lease 和故障处理细节见[恢复机制运维指南](RESILIENT_HARNESS.md)。
 
-## 6. 启用版本化策略和签发 MCP 写授权
+Web 工作台的“项目接入”可以直接选择本机目录，也可以填写后端可访问的普通目录、Git 仓库路径或公共 Git URL。普通目录不需要 `.git`、不要求 Java、也不要求能够编译；系统会复制文件并创建内部固定快照，不修改原目录。浏览器选择目录时，单文件上限默认 16 MiB、总请求上限默认 256 MiB，最多 20,000 个文件。
+
+## 6. 创建分析或业务讲解任务
+
+`ANALYZE` 用于回答“需求如何实现、影响哪里”，`EXPLAIN` 用于回答“现有业务如何运行”。两者都会动态规划调查步骤，但 Runtime 只允许读取，不允许修改项目：
+
+```bash
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar \
+  task-create --project PROJECT_ID --mode ANALYZE \
+  --requirement "分析每日转账限额应如何实现" \
+  --criterion "说明影响范围、风险和测试建议"
+
+java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar \
+  task-result RUN_ID --format MARKDOWN
+```
+
+结果包含结构化业务结论、源码路径/符号/行号证据、未知事项和 grounding 指标。完整创建、执行和结果 API 示例见 [ANALYZE 与 EXPLAIN 只读任务](READ_ONLY_TASK_MODES.md)。
+
+## 7. 启用版本化策略和签发 MCP 写授权
 
 ```bash
 export LEGACY_PILOT_POLICY_FILE="$(pwd)/config/policy-default.yml"
@@ -69,7 +87,8 @@ Token 只在签发响应中返回一次。将它放入 `project.apply_patch` 的
 | --- | --- |
 | “requires Java 21” | 设置 `JAVA_HOME` 指向 JDK 21，再运行 Wrapper |
 | Maven MCP 工具失败 | 确认 Docker daemon 已运行，并已缓存 Maven sandbox image/dependencies |
-| 项目注册被拒绝 | 清理目标仓库 dirty 状态；当前版本拒绝 submodule、Git LFS 和含凭据 URL |
+| 项目接入提示未提交改动 | Git 项目可以继续接入，但只分析固定 revision 中已提交的内容 |
+| 项目注册被拒绝 | 普通目录检查大小、文件数和符号链接；Git 来源检查路径/revision，当前版本拒绝 submodule、Git LFS 和含凭据 URL |
 | MCP 路径被拒绝 | 只能使用启动参数绑定 workspace 内的相对路径，不能使用绝对路径或 `..` |
 | Agent 等待审批 | 使用 REST approval endpoint 或 CLI `agent-approve`，随后 `agent-resume` |
 | Agent 状态无法读取 | 运行 `agent-state-check RUN_ID`；保留 `.corrupt` 和 `.previous` 文件供诊断 |

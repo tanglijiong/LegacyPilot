@@ -63,9 +63,16 @@ class MavenToolTest {
     assertEquals(
         "run_tests",
         MavenTool.tests(sandbox, null, Set.of(), Set.of(), limits()).descriptor().name());
-    assertEquals(
-        "static_analysis",
-        MavenTool.staticAnalysis(sandbox, null, Set.of(), Set.of(), limits()).descriptor().name());
+    var staticAnalysis = MavenTool.staticAnalysis(sandbox, null, Set.of(), Set.of(), limits());
+    assertEquals("static_analysis", staticAnalysis.descriptor().name());
+    assertTrue(
+        staticAnalysis
+            .command(MAPPER.readTree("{}"))
+            .containsAll(
+                java.util.List.of(
+                    "-Dcheckstyle.config.location=google_checks.xml",
+                    "org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:check",
+                    "com.github.spotbugs:spotbugs-maven-plugin:4.10.4.0:check")));
     var tool = MavenTool.testClass(sandbox, null, Set.of("ci"), Set.of("safe"), limits());
     assertThrows(
         ToolFailureException.class,

@@ -9,6 +9,7 @@ import io.legacypilot.tool.spi.JsonSchemas;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,15 @@ class ModelGatewayTest {
         new ArrayDeque<>(
             List.of(
                 response("not json", 2, 1), response("```json\n{\"name\":\"Ada\"}\n```", 3, 2)));
-    var gateway = new StructuredModelGateway(request -> responses.removeFirst(), MAPPER, 1);
+    var requests = new ArrayList<ModelRequest>();
+    var gateway =
+        new StructuredModelGateway(
+            request -> {
+              requests.add(request);
+              return responses.removeFirst();
+            },
+            MAPPER,
+            1);
 
     var result = gateway.generate(request(), Person.class);
 
@@ -31,6 +40,8 @@ class ModelGatewayTest {
     assertEquals(1, result.formatCorrections());
     assertEquals(8, result.usage().totalTokens());
     assertEquals(Duration.ofMillis(4), result.duration());
+    assertTrue(requests.get(1).userPrompt().contains("not json"));
+    assertTrue(requests.get(1).userPrompt().contains("Validation error"));
   }
 
   @Test
@@ -66,7 +77,7 @@ class ModelGatewayTest {
         0, new BigDecimal("0.000020").compareTo(costs.price("model", 2, 2).estimatedCostUsd()));
     assertEquals(BigDecimal.ZERO, costs.price("unknown", 2, 2).estimatedCostUsd());
     assertThrows(
-        IllegalArgumentException.class, () -> new StructuredModelGateway(r -> null, MAPPER, 4));
+        IllegalArgumentException.class, () -> new StructuredModelGateway(r -> null, MAPPER, 21));
   }
 
   private static ModelRequest request() {

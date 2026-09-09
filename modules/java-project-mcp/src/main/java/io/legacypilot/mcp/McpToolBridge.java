@@ -286,10 +286,17 @@ public final class McpToolBridge {
           && !relative.startsWith("..")
           && target.startsWith(workspace)
           && java.nio.file.Files.isRegularFile(target, java.nio.file.LinkOption.NOFOLLOW_LINKS)
-          && java.nio.file.Files.readString(target).equals(input.path("replacement").asText());
+          && confirmedPatchContent(java.nio.file.Files.readString(target), input);
     } catch (RuntimeException | java.io.IOException exception) {
       return false;
     }
+  }
+
+  private static boolean confirmedPatchContent(String actual, JsonNode input) {
+    if (!input.has("startLine") || !input.has("endLine")) {
+      return actual.equals(input.path("replacement").asText());
+    }
+    return actual.contains(input.path("replacement").asText());
   }
 
   private JsonNode response(JsonNode structured, String text, boolean error, String code) {

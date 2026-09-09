@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.legacypilot.analysis.java.JavaProjectIndexer;
 import io.legacypilot.application.port.IdGenerator;
 import io.legacypilot.application.port.ProjectRepository;
+import io.legacypilot.application.port.SourceFileReader;
 import io.legacypilot.application.port.TaskRepository;
 import io.legacypilot.application.port.TaskRunRepository;
 import io.legacypilot.application.port.WorkspaceService;
@@ -12,7 +13,12 @@ import io.legacypilot.application.service.CreateTaskUseCase;
 import io.legacypilot.application.service.GetProjectUseCase;
 import io.legacypilot.application.service.GetRunStatusUseCase;
 import io.legacypilot.application.service.GetTaskUseCase;
+import io.legacypilot.application.service.InspectProjectUseCase;
+import io.legacypilot.application.service.ListProjectTasksUseCase;
+import io.legacypilot.application.service.ListProjectsUseCase;
+import io.legacypilot.application.service.ReadProjectSourceUseCase;
 import io.legacypilot.application.service.RegisterProjectUseCase;
+import io.legacypilot.application.service.RemoveProjectUseCase;
 import io.legacypilot.application.service.StartRunUseCase;
 import io.legacypilot.context.ContextBuilder;
 import io.legacypilot.context.ContextCompactor;
@@ -35,6 +41,7 @@ import io.legacypilot.observability.ReportStore;
 import io.legacypilot.observability.SensitiveDataRedactor;
 import io.legacypilot.observability.TraceSink;
 import io.legacypilot.persistence.JdbcProjectRepository;
+import io.legacypilot.persistence.JdbcRunExecutionCommandRepository;
 import io.legacypilot.persistence.JdbcTaskRepository;
 import io.legacypilot.persistence.JdbcTaskRunRepository;
 import io.legacypilot.runtime.ActionJournal;
@@ -74,6 +81,7 @@ import io.legacypilot.verification.DiffPolicyCheck;
 import io.legacypilot.verification.ToolVerificationCheck;
 import io.legacypilot.verification.VerificationPipeline;
 import io.legacypilot.verification.WorkspaceIntegrityCheck;
+import io.legacypilot.workspace.GitSourceFileReader;
 import io.legacypilot.workspace.GitWorkspaceService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.file.Path;
@@ -124,11 +132,24 @@ public class LegacyPilotCoreConfiguration {
   }
 
   @Bean
+  io.legacypilot.application.port.RunExecutionCommandRepository runExecutionCommandRepository(
+      JdbcClient jdbc) {
+    return new JdbcRunExecutionCommandRepository(jdbc);
+  }
+
+  @Bean
   WorkspaceService workspaceService(
       @Value("${legacy-pilot.workspace.root:${user.dir}/.legacy-pilot}") Path root,
       @Value("${legacy-pilot.workspace.command-timeout:30s}") Duration timeout,
       @Value("${legacy-pilot.workspace.max-output-characters:65536}") int maxOutputCharacters) {
     return new GitWorkspaceService(root, timeout, maxOutputCharacters);
+  }
+
+  @Bean
+  SourceFileReader sourceFileReader(
+      @Value("${legacy-pilot.source.max-file-bytes:1048576}") long maxFileBytes,
+      @Value("${legacy-pilot.workspace.command-timeout:30s}") Duration timeout) {
+    return new GitSourceFileReader(maxFileBytes, timeout);
   }
 
   @Bean
@@ -138,8 +159,29 @@ public class LegacyPilotCoreConfiguration {
   }
 
   @Bean
+  InspectProjectUseCase inspectProjectUseCase(WorkspaceService workspaces) {
+    return new InspectProjectUseCase(workspaces);
+  }
+
+  @Bean
   GetProjectUseCase getProjectUseCase(ProjectRepository projects) {
     return new GetProjectUseCase(projects);
+  }
+
+  @Bean
+  ReadProjectSourceUseCase readProjectSourceUseCase(
+      ProjectRepository projects, SourceFileReader sourceFiles) {
+    return new ReadProjectSourceUseCase(projects, sourceFiles);
+  }
+
+  @Bean
+  ListProjectsUseCase listProjectsUseCase(ProjectRepository projects) {
+    return new ListProjectsUseCase(projects);
+  }
+
+  @Bean
+  RemoveProjectUseCase removeProjectUseCase(ProjectRepository projects) {
+    return new RemoveProjectUseCase(projects);
   }
 
   @Bean
@@ -151,6 +193,12 @@ public class LegacyPilotCoreConfiguration {
   @Bean
   GetTaskUseCase getTaskUseCase(TaskRepository tasks) {
     return new GetTaskUseCase(tasks);
+  }
+
+  @Bean
+  ListProjectTasksUseCase listProjectTasksUseCase(
+      ProjectRepository projects, TaskRepository tasks) {
+    return new ListProjectTasksUseCase(projects, tasks);
   }
 
   @Bean
@@ -330,13 +378,17 @@ public class LegacyPilotCoreConfiguration {
   }
 
   @Bean
-  StructuredModelGateway modelGateway(RawModelClient client, ObjectMapper mapper) {
-    return new StructuredModelGateway(client, mapper, 2);
+  StructuredModelGateway modelGateway(
+      RawModelClient client,
+      ObjectMapper mapper,
+      @Value("${legacy-pilot.model.maximum-corrections:2}") int maximumCorrections) {
+    return new StructuredModelGateway(client, mapper, maximumCorrections);
   }
 
   @Bean
-  AgentPlanner agentPlanner(StructuredModelGateway models, ObjectMapper mapper) {
-    return new AgentPlanner(models, mapper);
+  AgentPlanner agentPlanner(
+      StructuredModelGateway models, ObjectMapper mapper, ToolRegistry registry) {
+    return new AgentPlanner(models, mapper, registry.descriptors());
   }
 
   @Bean
@@ -423,6 +475,8 @@ public class LegacyPilotCoreConfiguration {
   VerificationPipeline verificationPipeline(
       ObjectMapper mapper,
       @Value("${legacy-pilot.verification.maximum-changed-lines:2000}") int maximumChangedLines,
+      @Value("${legacy-pilot.verification.static-analysis-required:false}")
+          boolean staticAnalysisRequired,
       @Value("${legacy-pilot.verification.protected-globs:.git/**,.github/**}")
           List<String> protectedGlobs) {
     var empty = mapper.createObjectNode();
@@ -432,7 +486,8 @@ public class LegacyPilotCoreConfiguration {
             new DiffPolicyCheck(maximumChangedLines, protectedGlobs),
             new ToolVerificationCheck("compile", "compile_project", empty, true, true),
             new ToolVerificationCheck("tests", "run_tests", empty, true, true),
-            new ToolVerificationCheck("static-analysis", "static_analysis", empty, true, true)));
+            new ToolVerificationCheck(
+                "static-analysis", "static_analysis", empty, staticAnalysisRequired, true)));
   }
 
   @Bean

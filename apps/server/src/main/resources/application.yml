@@ -2,13 +2,19 @@ spring:
   application:
     name: legacy-pilot-server
   datasource:
-    url: jdbc:h2:file:${LEGACY_PILOT_DATA_DIR:./.legacy-pilot}/legacy-pilot;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE
+    url: jdbc:h2:file:${LEGACY_PILOT_DATA_DIR:./.legacy-pilot}/legacy-pilot;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;AUTO_SERVER=TRUE;WRITE_DELAY=0
     username: sa
     password: ""
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: ${LEGACY_PILOT_IMPORT_MAX_FILE_SIZE:64MB}
+      max-request-size: ${LEGACY_PILOT_IMPORT_MAX_REQUEST_SIZE:272MB}
 
 legacy-pilot:
+  verification:
+    static-analysis-required: ${LEGACY_PILOT_STATIC_ANALYSIS_REQUIRED:false}
   security:
     mode: ${LEGACY_PILOT_SECURITY_MODE:deny-all}
   policy:
@@ -21,6 +27,9 @@ legacy-pilot:
     memory:
       maximum-entries: ${LEGACY_PILOT_AGENT_MEMORY_MAXIMUM_ENTRIES:5000}
   execution:
+    worker-count: ${LEGACY_PILOT_EXECUTION_WORKERS:2}
+    command-lease-ttl: ${LEGACY_PILOT_COMMAND_LEASE_TTL:2m}
+    queue-scan-interval: ${LEGACY_PILOT_QUEUE_SCAN_INTERVAL:5s}
     model: ${LEGACY_PILOT_MODEL:local-model}
     context-token-budget: ${LEGACY_PILOT_CONTEXT_TOKEN_BUDGET:12000}
     maximum-candidates: ${LEGACY_PILOT_MAXIMUM_CANDIDATES:50}
@@ -30,7 +39,13 @@ legacy-pilot:
     maximum-tokens: ${LEGACY_PILOT_MAXIMUM_TOKENS:100000}
     maximum-cost-usd: ${LEGACY_PILOT_MAXIMUM_COST_USD:10.00}
     maximum-duration: ${LEGACY_PILOT_MAXIMUM_DURATION:30m}
+  events:
+    poll-interval: ${LEGACY_PILOT_EVENT_POLL_INTERVAL:500ms}
+    stream-timeout: ${LEGACY_PILOT_EVENT_STREAM_TIMEOUT:30m}
+  source:
+    max-file-bytes: ${LEGACY_PILOT_SOURCE_MAX_FILE_BYTES:1048576}
   model:
+    maximum-corrections: ${LEGACY_PILOT_MODEL_MAXIMUM_CORRECTIONS:2}
     unix-socket: ${LEGACY_PILOT_MODEL_SOCKET:}
     base-url: ${LEGACY_PILOT_MODEL_BASE_URL:}
   sandbox:

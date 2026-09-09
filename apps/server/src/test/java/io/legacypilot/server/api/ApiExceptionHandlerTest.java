@@ -2,17 +2,22 @@ package io.legacypilot.server.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import io.legacypilot.application.error.ConcurrentUpdateException;
 import io.legacypilot.application.error.ResourceNotFoundException;
 import io.legacypilot.domain.run.InvalidStateTransitionException;
 import io.legacypilot.domain.run.RunStatus;
+import io.legacypilot.server.service.SourceAccessAudit;
 import io.legacypilot.workspace.WorkspaceException;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 class ApiExceptionHandlerTest {
-  private final ApiExceptionHandler handler = new ApiExceptionHandler();
+  private final ApiExceptionHandler handler =
+      new ApiExceptionHandler(mock(SourceAccessAudit.class));
 
   @Test
   void assignsStableCodesToApplicationFailures() {
@@ -31,6 +36,9 @@ class ApiExceptionHandlerTest {
         handler.conflict(new IllegalStateException("execution busy")), 409, "EXECUTION_CONFLICT");
     assertProblem(
         handler.badRequest(new IllegalArgumentException("bad input")), 400, "INVALID_REQUEST");
+    var upload = handler.uploadTooLarge(new MaxUploadSizeExceededException(64L * 1024 * 1024));
+    assertProblem(upload, 413, "DIRECTORY_UPLOAD_TOO_LARGE");
+    assertTrue(upload.getDetail().contains("单个文件最多 64 MB"));
   }
 
   @Test

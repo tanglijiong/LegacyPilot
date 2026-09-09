@@ -27,6 +27,14 @@ public final class RegisterProjectUseCase {
   public Project register(String source, String requestedRevision) {
     var location = new RepositoryLocation(source);
     var registered = workspaces.register(location, requestedRevision);
+    var existing =
+        projects.findAll().stream()
+            .filter(project -> project.repositoryPath().equals(registered.repositoryPath()))
+            .filter(project -> project.baseRevision().equals(registered.revision()))
+            .findFirst();
+    if (existing.isPresent()) {
+      return existing.orElseThrow();
+    }
     var project =
         new Project(
             new ProjectId(ids.next("project")),

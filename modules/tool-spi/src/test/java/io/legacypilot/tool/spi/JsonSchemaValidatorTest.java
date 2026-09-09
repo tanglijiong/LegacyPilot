@@ -74,4 +74,23 @@ class JsonSchemaValidatorTest {
         .put("changed", true);
     assertEquals(0, descriptor.inputSchema().size());
   }
+
+  @Test
+  void requiresExactlyOneMatchingAlternative() throws Exception {
+    var schema =
+        JsonSchemas.parse(
+            """
+            {"oneOf":[
+              {"type":"object","required":["path"],"additionalProperties":false,
+               "properties":{"path":{"type":"string"}}},
+              {"type":"object","required":["query"],"additionalProperties":false,
+               "properties":{"query":{"type":"string"}}}
+            ]}
+            """);
+
+    assertTrue(validator.validate(schema, mapper.readTree("{\"path\":\"README.md\"}")).isEmpty());
+    assertFalse(validator.validate(schema, mapper.readTree("{}")).isEmpty());
+    assertFalse(
+        validator.validate(schema, mapper.readTree("{\"path\":\"x\",\"query\":\"x\"}")).isEmpty());
+  }
 }

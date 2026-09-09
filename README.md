@@ -47,6 +47,7 @@ Token / Cost / Duration: recorded
 ## 核心能力
 
 - 自研 Agent Runtime：Plan → Act → Observe → Verify → Retry
+- `CHANGE`、`ANALYZE`、`EXPLAIN` 三种任务模式；分析与讲解结果带源码证据且强制只读
 - Java 代码上下文引擎：AST + BM25 + Vector + Dependency Graph
 - 受控工具调用：文件系统、Git、Maven、代码搜索与补丁应用
 - Docker / Git worktree 隔离执行与命令白名单
@@ -56,6 +57,7 @@ Token / Cost / Duration: recorded
 - 多模型有限 Fallback、Provider 熔断与路由证据
 - Revision-scoped Vector Store、Reranker 与显式降级
 - Trace、Token、Cost、Duration 等运行观测
+- 固定 Git revision 的安全源码片段读取、内容哈希校验与元数据审计
 - 版本化 Checkpoint、Action Journal、Run Lease 和跨进程安全恢复
 - 可重复运行的 Eval 数据集与成功率基准
 
@@ -87,10 +89,12 @@ Token / Cost / Duration: recorded
 - [已完成长期任务：Issues 21–26 可恢复 Harness](docs/NEXT_TASK_ISSUES_21_26.md)
 - [已完成长期任务：Issues 27–32 受治理工具链与模型韧性](docs/NEXT_TASK_ISSUES_27_32.md)
 - [下一阶段长期任务：v0.2 收口与证据优先的精简 v0.3](docs/NEXT_LONG_RUNNING_TASK_V0_2_V0_3.md)
+- [下一阶段长期任务：面试级 Web 产品化与端到端演示闭环](docs/NEXT_LONG_RUNNING_TASK_WEB_PRODUCTIZATION.md)
 - [银行内网 PoC 交付计划与状态台账](docs/BANK_POC_DELIVERY_PLAN.md)
 - [可恢复 Harness 运维指南](docs/RESILIENT_HARNESS.md)
 - [受治理 Harness 指南](docs/GOVERNED_HARNESS.md)
 - [30 分钟 Quickstart](docs/QUICKSTART.md)
+- [ANALYZE 与 EXPLAIN 只读任务](docs/READ_ONLY_TASK_MODES.md)
 - [MCP Server](docs/MCP_SERVER.md)
 - [Eval Harness 与公开基线](docs/EVALS.md)
 - [Eval Dataset v2 与 Fixture 治理](docs/EVAL_DATASET_V2.md)
@@ -135,9 +139,35 @@ Token / Cost / Duration: recorded
 java -jar apps/cli/target/legacy-pilot-cli-0.3.0-SNAPSHOT.jar --help
 ```
 
-CLI 还支持 `agent-approve`、`agent-resume`、`agent-state-check`、`agent-recover`、`capability-issue`、`capability-revoke` 和五任务 `eval-run`。默认数据和受管 worktree 位于当前目录的 `.legacy-pilot/`；可分别通过 `LEGACY_PILOT_DATA_DIR`、`LEGACY_PILOT_WORK_ROOT` 与 `LEGACY_PILOT_AGENT_STATE_ROOT` 调整。
+CLI 还支持带 `--mode CHANGE|ANALYZE|EXPLAIN` 的 `task-create`、以 JSON/Markdown 查看产物的 `task-result`、`agent-approve`、`agent-resume`、`agent-state-check`、`agent-recover`、`capability-issue`、`capability-revoke` 和五任务 `eval-run`。默认数据和受管 worktree 位于当前目录的 `.legacy-pilot/`；可分别通过 `LEGACY_PILOT_DATA_DIR`、`LEGACY_PILOT_WORK_ROOT` 与 `LEGACY_PILOT_AGENT_STATE_ROOT` 调整。
 
-本地项目注册会拒绝 dirty 仓库、submodule 和 Git LFS；远程注册仅接受不带凭证的公开 HTTP(S) Git URL。
+### 运行 Web 工作台原型
+
+Web 工作台支持项目接入、三种任务模式、连续多轮对话、动态执行计划、只读边界、源码证据和变更审批，并已接入真实 REST API。同一项目中的追问会持久化为同一会话，刷新页面后仍可继续；模型在处理当前问题时会携带最近六轮已完成问答的摘要上下文。项目接入支持直接选择无 Git 的本地目录、填写后端可访问的普通目录或 Git 仓库路径，以及公共 Git URL；预检不运行编译，并展示内部固定快照、技术栈、可用能力与限制。项目不必使用 Git，不必是 Java，也不必能够编译。执行与审批恢复通过持久化幂等命令异步受理，关闭浏览器不会中断后台任务，服务重启后可重新领取未完成命令；运行进度通过可断线续传的 SSE 实时显示，并保留轮询降级。证据面板从固定快照安全读取源码，以 revision 和 SHA-256 检查漂移，并支持证据行定位、上下文展开、受控全文和路径复制。CHANGE 决策工作台由服务端统一生成计划、影响文件、文件/行级 diff、策略、双 digest、独立审批记录以及编译、测试、静态检查和覆盖率门禁状态；过期 digest 会失败关闭，拒绝理由可审计。恢复工作台会分类模型、工具、策略、验证和基础设施失败，以 run version 阻止过期页面操作，只展示安全的取消、重试、重新规划或人工复核路径，并保留每次 command attempt。用于本地面试演示时，先启动本地模型，再执行一条命令：
+
+```bash
+./deploy/demo/start.sh
+```
+
+打开 `http://127.0.0.1:5173`。脚本会检查环境、创建干净的 Banking Demo 快照、启动前后端并自动注册项目；工作台会取得仅限本机、本次进程有效的开发者与审批人身份。详细说明和第一条 `EXPLAIN` 演示提示见[本地演示指南](deploy/demo/README.md)。
+
+发布前可运行 `./deploy/e2e/verify.sh`，通过同一入口执行 Java 全仓验证、Web 生产构建，以及连接真实 Spring/H2/Agent runtime 的 Playwright 浏览器门禁。失败截图、视频、trace、JSON/HTML 报告和服务端日志保存在 `apps/web/output/playwright/`；详见 [Issue 47 E2E 指南](deploy/e2e/README.md)。
+
+面试候选发布使用 `./deploy/candidate/verify.sh`：它在上述门禁之上校验公开材料，并在固定 Banking Demo revision 上连续执行三次完整演示闭环。主演示、3 分钟精简版、架构图和答辩材料见[面试演示指南](docs/INTERVIEW_DEMO.md)，候选判定见 [v0.3.0-rc.1 说明](docs/RELEASE_CANDIDATE_V0.3.md)。候选仅表示产品演示验收通过；20 题模型质量仍为 9/20，未达到 70% 门槛。
+
+普通前端开发仍可分别启动 REST 服务和 Vite：
+
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+打开终端提示的网址即可体验。原型范围和后续 API 接入边界见 [Web 工作台第一阶段计划](docs/WEB_PROTOTYPE_PLAN.md)。
+
+开发环境默认把 `/api` 代理到 `http://127.0.0.1:8080`。点击工作台右上角的连接设置，填入开发者 JWT；要演示写操作审批，还需填入属于另一身份的审批人 JWT。凭据只保存在当前浏览器标签页。
+
+本地项目允许包含未提交改动，但只分析所选 revision 中已提交的内容；submodule 和 Git LFS 仍会被拒绝。远程注册仅接受不带凭证的公开 HTTP(S) Git URL。
 
 ## 明确不做
 

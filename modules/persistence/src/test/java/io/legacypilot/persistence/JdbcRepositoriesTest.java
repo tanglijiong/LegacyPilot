@@ -1,10 +1,12 @@
 package io.legacypilot.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.legacypilot.application.error.ConcurrentUpdateException;
+import io.legacypilot.application.execution.RunExecutionCommand;
 import io.legacypilot.domain.project.GitRevision;
 import io.legacypilot.domain.project.Project;
 import io.legacypilot.domain.project.ProjectId;
@@ -17,6 +19,7 @@ import io.legacypilot.domain.task.AcceptanceCriteria;
 import io.legacypilot.domain.task.Requirement;
 import io.legacypilot.domain.task.Task;
 import io.legacypilot.domain.task.TaskId;
+import io.legacypilot.domain.task.TaskMode;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
@@ -34,6 +37,7 @@ class JdbcRepositoriesTest {
   private JdbcProjectRepository projects;
   private JdbcTaskRepository tasks;
   private JdbcTaskRunRepository runs;
+  private JdbcRunExecutionCommandRepository commands;
 
   @TempDir Path temporaryDirectory;
 
@@ -46,6 +50,7 @@ class JdbcRepositoriesTest {
     projects = new JdbcProjectRepository(jdbc);
     tasks = new JdbcTaskRepository(jdbc);
     runs = new JdbcTaskRunRepository(jdbc);
+    commands = new JdbcRunExecutionCommandRepository(jdbc);
   }
 
   @Test
@@ -61,6 +66,7 @@ class JdbcRepositoriesTest {
         new Task(
             new TaskId("task-1"),
             project.id(),
+            TaskMode.EXPLAIN,
             new Requirement("support unicode 数据"),
             new AcceptanceCriteria(List.of("first\nline", "第二项")),
             NOW);
@@ -73,6 +79,9 @@ class JdbcRepositoriesTest {
     assertEquals(project, projects.findById(project.id()).orElseThrow());
     assertEquals(task, tasks.findById(task.id()).orElseThrow());
     assertEquals(run.status(), runs.findById(run.id()).orElseThrow().status());
+    assertEquals(List.of(project), projects.findAll());
+    assertEquals(List.of(task), tasks.findByProjectId(project.id()));
+    assertEquals(run.status(), runs.findLatestByTaskId(task.id()).orElseThrow().status());
     assertEquals(2, runs.findById(run.id()).orElseThrow().history().size());
     assertTrue(projects.findById(new ProjectId("missing")).isEmpty());
     assertTrue(tasks.findById(new TaskId("missing")).isEmpty());
@@ -93,6 +102,82 @@ class JdbcRepositoriesTest {
   void rejectsDuplicateProjectIds() {
     var project = seedProject();
     assertThrows(IllegalStateException.class, () -> projects.add(project));
+  }
+
+  @Test
+  void softRemovesAProjectFromActiveQueries() {
+    var project = seedProject();
+
+    projects.remove(project.id());
+
+    assertTrue(projects.findById(project.id()).isEmpty());
+    assertEquals(List.of(), projects.findAll());
+  }
+
+  @Test
+  void claimsAndRenewsDurableExecutionCommandsOnce() {
+    var task = seedTask();
+    runs.add(TaskRun.create(new RunId("run-command"), task.id(), NOW));
+    var command =
+        new RunExecutionCommand(
+            "command-1",
+            "run-command",
+            RunExecutionCommand.Operation.EXECUTE,
+            0,
+            "execute-run-command",
+            "developer-a",
+            "correlation-1",
+            RunExecutionCommand.Status.QUEUED,
+            0,
+            null,
+            null,
+            "",
+            NOW,
+            NOW);
+    commands.add(command);
+
+    assertEquals(command, commands.findById(command.id()).orElseThrow());
+    assertEquals(List.of(command), commands.findByRun("run-command"));
+    assertTrue(commands.claim(command.id(), "worker-a", NOW, NOW.plusSeconds(120)));
+    assertFalse(commands.claim(command.id(), "worker-b", NOW, NOW.plusSeconds(120)));
+    assertTrue(commands.renew(command.id(), "worker-a", NOW, NOW.plusSeconds(180)));
+    assertEquals(1, commands.findClaimable(NOW.plusSeconds(181), 10).size());
+
+    assertTrue(
+        commands.claim(command.id(), "worker-b", NOW.plusSeconds(181), NOW.plusSeconds(300)));
+    commands.complete(command.id(), "worker-b", NOW.plusSeconds(182));
+    assertEquals(
+        RunExecutionCommand.Status.COMPLETED,
+        commands.findById(command.id()).orElseThrow().status());
+    assertEquals(2, commands.findById(command.id()).orElseThrow().attempts());
+  }
+
+  @Test
+  void cancelsQueuedCommandsWithoutDiscardingTheirAuditRecord() {
+    var task = seedTask();
+    runs.add(TaskRun.create(new RunId("run-cancel-command"), task.id(), NOW));
+    var command =
+        new RunExecutionCommand(
+            "command-cancel",
+            "run-cancel-command",
+            RunExecutionCommand.Operation.EXECUTE,
+            0,
+            "execute-run-cancel-command",
+            "developer-a",
+            "correlation-cancel",
+            RunExecutionCommand.Status.QUEUED,
+            0,
+            null,
+            null,
+            "",
+            NOW,
+            NOW);
+    commands.add(command);
+
+    assertEquals(1, commands.cancelQueued("run-cancel-command", NOW.plusSeconds(1)));
+    assertEquals(
+        RunExecutionCommand.Status.CANCELLED,
+        commands.findById(command.id()).orElseThrow().status());
   }
 
   @Test
@@ -130,11 +215,27 @@ class JdbcRepositoriesTest {
             .migrate()
             .migrationsExecuted);
 
-    assertEquals(1, Flyway.configure().dataSource(dataSource).load().migrate().migrationsExecuted);
+    assertEquals(5, Flyway.configure().dataSource(dataSource).load().migrate().migrationsExecuted);
     assertEquals(
         0,
         JdbcClient.create(dataSource)
             .sql("SELECT COUNT(*) FROM run_security_context")
+            .query(Integer.class)
+            .single());
+    assertEquals(
+        1,
+        JdbcClient.create(dataSource)
+            .sql(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE TABLE_NAME = 'TASKS' AND COLUMN_NAME = 'TASK_MODE'")
+            .query(Integer.class)
+            .single());
+    assertEquals(
+        1,
+        JdbcClient.create(dataSource)
+            .sql(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                    + "WHERE TABLE_NAME = 'TASKS' AND COLUMN_NAME = 'CONVERSATION_ID'")
             .query(Integer.class)
             .single());
   }

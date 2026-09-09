@@ -4,5 +4,6 @@ public enum RetrievalSource {
   EXACT,
   BM25,
   VECTOR,
-  GRAPH
+  GRAPH,
+  FALLBACK
 }
