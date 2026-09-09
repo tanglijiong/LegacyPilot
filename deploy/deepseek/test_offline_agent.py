@@ -6,6 +6,7 @@ import socketserver
 import tempfile
 import threading
 import unittest
+from unittest import mock
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 
@@ -14,6 +15,64 @@ import start_model_service
 
 
 class OfflineAgentTest(unittest.TestCase):
+    def test_main_passes_governed_task_constraints_to_completion(self):
+        with tempfile.TemporaryDirectory() as root:
+            workspace = Path(root)
+            source = workspace / "src/main/java/example/Value.java"
+            source.parent.mkdir(parents=True)
+            source.write_text("package example; final class Value {}\n", "utf-8")
+            allowed = "src/main/java/example/Value.java"
+            parsed = argparse.Namespace(
+                workspace=str(workspace),
+                model="local-model",
+                served_model_name="local-model",
+                reasoning_effort="low",
+                allowed_file=[allowed],
+                required_file=[allowed],
+                acceptance=[f"CONTAINS {allowed} => Value"],
+                jsonl=True,
+            )
+            response = {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "files": [
+                                        {
+                                            "path": allowed,
+                                            "content": "package example; final class Value {}\n",
+                                        }
+                                    ]
+                                }
+                            )
+                        }
+                    }
+                ],
+                "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+            }
+            old_base = os.environ.get("LEGACY_PILOT_MODEL_BASE_URL")
+            os.environ["LEGACY_PILOT_MODEL_BASE_URL"] = "http://127.0.0.1:12434/v1"
+            try:
+                with (
+                    mock.patch.object(model_agent, "arguments", return_value=parsed),
+                    mock.patch.object(model_agent.sys, "stdin", mock.Mock(read=lambda _: "prompt")),
+                    mock.patch.object(
+                        model_agent,
+                        "local_request",
+                        side_effect=[{"data": []}, response],
+                    ),
+                    mock.patch.object(model_agent, "build_failures", return_value=[]),
+                ):
+                    self.assertEqual(0, model_agent.main())
+            finally:
+                if old_base is None:
+                    os.environ.pop("LEGACY_PILOT_MODEL_BASE_URL", None)
+                else:
+                    os.environ["LEGACY_PILOT_MODEL_BASE_URL"] = old_base
+
+            self.assertEqual("package example; final class Value {}\n", source.read_text("utf-8"))
+
     def test_calls_an_openai_compatible_loopback_endpoint(self):
         paths = []
 

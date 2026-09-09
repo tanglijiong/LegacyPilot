@@ -92,6 +92,7 @@ public final class ChangeApplicationService {
 
     var applied = new ArrayList<String>();
     var backups = new ArrayList<Backup>();
+    var completed = false;
     try {
       for (var operation : operations) {
         if (operation.alreadyApplied()) {
@@ -101,9 +102,11 @@ public final class ChangeApplicationService {
         write(operation.destination(), operation.desired());
         applied.add(operation.relative().toString().replace('\\', '/'));
       }
-    } catch (RuntimeException exception) {
-      rollback(backups);
-      throw exception;
+      completed = true;
+    } finally {
+      if (!completed) {
+        rollback(backups);
+      }
     }
     trace.record(
         runId,
@@ -226,8 +229,9 @@ public final class ChangeApplicationService {
         Files.deleteIfExists(destination);
         return;
       }
-      Files.createDirectories(destination.getParent());
-      var temporary = Files.createTempFile(destination.getParent(), ".legacypilot-", ".tmp");
+      var parent = Objects.requireNonNull(destination.getParent(), "destination requires a parent");
+      Files.createDirectories(parent);
+      var temporary = Files.createTempFile(parent, ".legacypilot-", ".tmp");
       try {
         Files.write(temporary, content.orElseThrow(), StandardOpenOption.TRUNCATE_EXISTING);
         Files.move(

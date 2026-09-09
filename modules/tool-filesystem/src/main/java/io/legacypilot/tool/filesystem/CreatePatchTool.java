@@ -142,7 +142,8 @@ public final class CreatePatchTool implements AgentTool {
   private static void rejectPlaceholder(String replacement) {
     var normalized = replacement.toLowerCase(java.util.Locale.ROOT);
     if (normalized.matches(
-        "(?s).*(其他代码|其余代码|代码省略|省略代码|保持不变|existing code|rest of (the )?code|unchanged code|code omitted).*")) {
+        "(?s).*(其他代码|其余代码|代码省略|省略代码|保持不变|existing code|"
+            + "rest of (the )?code|unchanged code|code omitted).*")) {
       throw new ToolFailureException(
           ToolErrorCode.INVALID_INPUT_SCHEMA,
           "replacement contains an omitted-code placeholder; provide executable source only");

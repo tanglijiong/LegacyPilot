@@ -228,7 +228,9 @@ class FilesystemToolsTest {
                     .execute(
                         context,
                         MAPPER.readTree(
-                            "{\"path\":\"src/main/java/Calculator.java\",\"replacement\":\"public class Calculator {\\n  public void calculate() {\\n\"}")));
+                            "{\"path\":\"src/main/java/Calculator.java\","
+                                + "\"replacement\":\"public class Calculator {\\n"
+                                + "  public void calculate() {\\n\"}")));
 
     assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
   }
@@ -244,7 +246,8 @@ class FilesystemToolsTest {
                     .execute(
                         context,
                         MAPPER.readTree(
-                            "{\"path\":\"src/main/java/example/Calculator.java\",\"replacement\":\"public class Calculator {}\"}")));
+                            "{\"path\":\"src/main/java/example/Calculator.java\","
+                                + "\"replacement\":\"public class Calculator {}\"}")));
 
     assertEquals(ToolErrorCode.INVALID_INPUT_SCHEMA, failure.code());
   }
@@ -309,7 +312,9 @@ class FilesystemToolsTest {
             .execute(
                 context,
                 MAPPER.readTree(
-                    "{\"path\":\"src/main/java/AnotherType.java\",\"startLine\":1,\"endLine\":12,\"replacement\":\"final class AnotherType {}\\n\"}"));
+                    "{\"path\":\"src/main/java/AnotherType.java\","
+                        + "\"startLine\":1,\"endLine\":12,"
+                        + "\"replacement\":\"final class AnotherType {}\\n\"}"));
 
     assertTrue(patch.path("createsFile").asBoolean());
     assertEquals("FULL_FILE", patch.path("patchMode").asText());

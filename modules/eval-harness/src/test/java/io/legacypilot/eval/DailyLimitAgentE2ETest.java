@@ -48,6 +48,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Duration;
@@ -72,16 +73,15 @@ class DailyLimitAgentE2ETest {
       var plan =
           new ChangePlan(
               1,
-              List.of("add policy", "add exception", "update service", "add tests", "verify"),
-              List.of(policyPath, exceptionPath, servicePath, testPath),
+              List.of("add policy", "add exception", "update service", "verify"),
+              List.of(policyPath, exceptionPath, servicePath),
               "MEDIUM",
-              "Daily limit requires service and deterministic tests");
+              "Daily limit requires a service change and independent verification");
       var actions =
           List.of(
               patch(mapper, workspace.root(), reference, policyPath),
               patch(mapper, workspace.root(), reference, exceptionPath),
               patch(mapper, workspace.root(), reference, servicePath),
-              patch(mapper, workspace.root(), reference, testPath),
               new AgentAction("VERIFY", "", null, "run deterministic verification"));
       var script = new java.util.ArrayList<Object>();
       script.add(plan);
@@ -96,6 +96,7 @@ class DailyLimitAgentE2ETest {
           new VerificationPipeline(
               List.of(
                   context -> {
+                    overlayVerificationTest(reference.resolve(testPath), context.workspace());
                     var assertions =
                         new SourceAssertionEngine()
                             .evaluate(context.workspace(), task.assertions());
@@ -125,7 +126,10 @@ class DailyLimitAgentE2ETest {
               "fake-replay");
       var result =
           runtime(models, mapper, tools, verification, stateRoot, "restart-0").execute(request);
-      assertEquals(RuntimeStatus.WAITING_FOR_APPROVAL, result.checkpoint().status());
+      assertEquals(
+          RuntimeStatus.WAITING_FOR_APPROVAL,
+          result.checkpoint().status(),
+          result.checkpoint().observation() + " — " + result.verification());
 
       approve(
           mapper, stateRoot, request.runId(), result.checkpoint().pendingAction(), planDigest, 1);
@@ -202,18 +206,11 @@ class DailyLimitAgentE2ETest {
       result =
           runtime(models, mapper, tools, verification, stateRoot, "restart-7")
               .resume(request.runId());
-      assertEquals(RuntimeStatus.WAITING_FOR_APPROVAL, result.checkpoint().status());
-      approve(
-          mapper, stateRoot, request.runId(), result.checkpoint().pendingAction(), planDigest, 5);
-      result =
-          runtime(models, mapper, tools, verification, stateRoot, "restart-8")
-              .resume(request.runId());
-
       assertEquals(RuntimeStatus.SUCCEEDED, result.checkpoint().status());
       assertEquals(RiskLevel.LOW, result.verification().risk());
       assertTrue(Files.readString(workspace.root().resolve(servicePath)).contains("synchronized"));
       assertEquals(
-          4,
+          3,
           new FileActionJournal(stateRoot.resolve("actions"), mapper)
               .records(request.runId())
               .size());
@@ -361,6 +358,18 @@ class DailyLimitAgentE2ETest {
     input.put("expectedSha256", sha256(current));
     input.put("replacement", replacement);
     return new AgentAction("TOOL", "apply_patch", input, "apply reviewed change");
+  }
+
+  private static void overlayVerificationTest(Path source, Path workspace) {
+    try {
+      Files.copy(
+          source,
+          workspace.resolve(
+              "src/test/java/io/legacypilot/samples/banking/TransferServiceTest.java"),
+          StandardCopyOption.REPLACE_EXISTING);
+    } catch (java.io.IOException exception) {
+      throw new IllegalStateException("unable to install verifier-owned test", exception);
+    }
   }
 
   private static String sha256(String value) throws Exception {

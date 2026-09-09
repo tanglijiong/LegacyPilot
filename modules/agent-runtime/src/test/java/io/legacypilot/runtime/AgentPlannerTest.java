@@ -130,7 +130,9 @@ class AgentPlannerTest {
             "create_patch",
             "Prepare a source patch.",
             JsonSchemas.parse(
-                "{\"type\":\"object\",\"required\":[\"path\",\"replacement\"],\"properties\":{\"path\":{\"type\":\"string\"},\"replacement\":{\"type\":\"string\"}}}"),
+                "{\"type\":\"object\",\"required\":[\"path\",\"replacement\"],"
+                    + "\"properties\":{\"path\":{\"type\":\"string\"},"
+                    + "\"replacement\":{\"type\":\"string\"}}}"),
             JsonSchemas.parse("{\"type\":\"object\"}"),
             RiskLevel.READ_ONLY,
             Idempotency.IDEMPOTENT,

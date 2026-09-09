@@ -51,7 +51,7 @@ public class ApiExceptionHandler {
     return ApiProblems.create(
         HttpStatus.PAYLOAD_TOO_LARGE,
         "DIRECTORY_UPLOAD_TOO_LARGE",
-        "所选目录超过接入上限：单个文件最多 64 MB，项目文件总计最多 256 MB。请排除依赖、构建产物或改用后端可访问的本地路径。");
+        "所选目录超过接入上限：单个文件最多 64 MB，项目文件总计最多 256 MB。" + "请排除依赖、构建产物或改用后端可访问的本地路径。");
   }
 
   @ExceptionHandler(SourceAccessException.class)
